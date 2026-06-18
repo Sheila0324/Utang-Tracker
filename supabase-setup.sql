@@ -28,12 +28,7 @@ create table if not exists dues (
 -- 3. BUDGET TABLE (single row, id=1)
 create table if not exists budget (
   id integer primary key default 1,
-  income numeric default 2300,
-  food numeric default 1000,
-  bills numeric default 300,
-  emergency numeric default 200,
-  envelopes numeric default 800,
-  envelope_split jsonb default '[]'::jsonb
+  sections jsonb default '[]'::jsonb
 );
 
 -- ============================================================
@@ -49,42 +44,44 @@ create policy "Allow all for anon" on dues for all using (true) with check (true
 create policy "Allow all for anon" on budget for all using (true) with check (true);
 
 -- ============================================================
--- INSERT DEFAULT BUDGET ROW
+-- CLEAR ALL DATA (fresh start)
 -- ============================================================
-insert into budget (id, income, food, bills, emergency, envelopes, envelope_split)
-values (
-  1, 2300, 1000, 300, 200, 800,
-  '[{"name":"GCash","amount":300},{"name":"Sloan","amount":300},{"name":"Maribank","amount":200}]'::jsonb
-)
-on conflict (id) do nothing;
+-- Wipes all existing debts, dues, and resets budget to zero.
+-- Run this in Supabase SQL Editor to clear your database.
+
+delete from debts;
+delete from dues;
+delete from budget;
+
+-- Insert a blank budget row (id=1) with empty arrays
+insert into budget (id, sections)
+values (1, '[]'::jsonb)
+on conflict (id) do update set
+  sections = '[]'::jsonb;
 
 -- ============================================================
--- INSERT DEFAULT DEBTS
+-- KEEP-ALIVE: pg_cron Job (run once — prevents free-tier pause)
 -- ============================================================
-insert into debts (id, name, total, min, goal, saved, status) values
-  ('d1', 'Atome Cash',    20725.85, 6273.17, 6273.17, 0, 'Waiting for Upwork'),
-  ('d2', 'GCash',          7399.56, 1057.08, 1057.08, 0, ''),
-  ('d3', 'Sloan',         17822.32, 2227.79, 2227.79, 0, ''),
-  ('d4', 'Maribank',      42876.30, 3949.13, 3949.13, 0, ''),
-  ('d5', 'Giem''s Gcash',  1510.11, 1510.11, 1510.11, 0, ''),
-  ('d6', 'Maya',           8942.23, 8942.23,       0, 0, '')
-on conflict (id) do nothing;
+-- Supabase free-tier projects pause after ~1 week of inactivity.
+-- This cron job runs a lightweight query every Monday at 08:00 UTC
+-- to keep the project alive automatically.
+--
+-- STEP 1: Enable the pg_cron extension (do this ONCE in SQL editor)
+--   Go to: Dashboard → Database → Extensions → search "pg_cron" → Enable
+--   OR run the line below:
+-- create extension if not exists pg_cron;
+--
+-- STEP 2: Run the cron job registration below:
 
--- ============================================================
--- INSERT DEFAULT DUE DATES
--- ============================================================
-insert into dues (id, name, date, amount, paid) values
-  ('du1',  'Axell''s savings',      '2026-06-18',    200.00, false),
-  ('du2',  'Electricity',           '2026-06-20',   3861.25, false),
-  ('du3',  'Sloan',                 '2026-06-24',   2227.82, false),
-  ('du4',  'Alahas',                '2026-06-25',      0.00, false),
-  ('du5',  'Converge',              '2026-06-26',   1250.00, false),
-  ('du6',  'Maya',                  '2026-06-30',   6619.43, false),
-  ('du7',  'Pldt',                  '2026-07-02',   1399.00, false),
-  ('du8',  'Sloan 3 (6months)',     '2026-07-04',   2836.14, false),
-  ('du9',  'Oven',                  '2026-07-07',   3546.87, false),
-  ('du10', 'Sloan 2 (3months)',     '2026-07-07',   2309.01, false),
-  ('du11', 'Maribank',              '2026-07-09',   3949.17, false),
-  ('du12', 'Menjel Atome',         '2026-07-15',   4075.00, false),
-  ('du13', 'Shoppe VIP renewal',   '2026-07-15',      0.00, false)
-on conflict (id) do nothing;
+select cron.schedule(
+  'utang-tracker-keepalive',         -- job name (unique)
+  '0 8 * * 1',                        -- every Monday at 08:00 UTC
+  $$select count(*) from budget$$     -- lightweight ping query
+);
+
+-- To verify the job was created:
+-- select * from cron.job;
+
+-- To remove the job if needed:
+-- select cron.unschedule('utang-tracker-keepalive');
+

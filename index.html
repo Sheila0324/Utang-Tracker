@@ -1481,61 +1481,7 @@
         <p>Budget settings & data</p>
       </div>
 
-      <div class="section-label">💸 Weekly Income</div>
-      <div class="planner-section">
-        <div class="planner-item">
-          <div class="planner-item-left">
-            <div class="pi-label">Doyin Weekly</div>
-            <div class="pi-name">Stable Income</div>
-          </div>
-          <div class="planner-item-right">
-            <div class="pi-amount" id="planner-income">₱2,300</div>
-            <div class="pi-sub">per week</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-label">📋 Budget Breakdown</div>
-      <div class="planner-section" id="planner-budget"></div>
-
-      <div class="section-label">✉️ Envelope Split (₱800/week)</div>
-      <div class="env-split-card" id="planner-envelope"></div>
-
-      <div class="section-label">🛠 Manage</div>
-      <button class="data-btn" onclick="openBudgetModal()">
-        <span class="db-icon">💰</span>
-        <span class="db-text">
-          <div>Edit Budget</div>
-          <div class="db-sub">Change weekly income & allocations</div>
-        </span>
-        <span class="db-arrow">›</span>
-      </button>
-      <button class="data-btn" onclick="exportData()">
-        <span class="db-icon">📤</span>
-        <span class="db-text">
-          <div>Export Data</div>
-          <div class="db-sub">Download as JSON backup</div>
-        </span>
-        <span class="db-arrow">›</span>
-      </button>
-      <button class="data-btn" onclick="document.getElementById('import-input').click()">
-        <span class="db-icon">📥</span>
-        <span class="db-text">
-          <div>Import Data</div>
-          <div class="db-sub">Restore from JSON backup</div>
-        </span>
-        <span class="db-arrow">›</span>
-      </button>
-      <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)" />
-      <button class="data-btn"
-        onclick="showConfirm('Reset all data?', 'This will restore all default data and cannot be undone.', resetData)">
-        <span class="db-icon">🔄</span>
-        <span class="db-text">
-          <div>Reset to Defaults</div>
-          <div class="db-sub">Restore original Notion data</div>
-        </span>
-        <span class="db-arrow" style="color:var(--red)">›</span>
-      </button>
+      <div id="planner-content"></div>
 
       <div style="padding: 20px 16px; color: var(--text3); font-size: 12px; text-align: center; line-height: 1.6;">
         🎯 Goal: Debt-free in 12–13 months<br />
@@ -1641,36 +1587,52 @@
     </div>
 
     <!-- ===========================
-       BUDGET MODAL
+       SECTION MODAL
   =========================== -->
-    <div class="modal-backdrop hidden" id="budget-modal">
+    <div class="modal-backdrop hidden" id="section-modal">
       <div class="modal-sheet">
         <div class="modal-handle"></div>
-        <div class="modal-title">Edit Weekly Budget</div>
+        <div class="modal-title" id="section-modal-title">Add Section</div>
         <div class="form-group">
-          <label class="form-label">Weekly Income (₱)</label>
-          <input class="form-input" id="b-income" type="number" />
+          <label class="form-label">Section Title</label>
+          <input class="form-input" id="sec-title" placeholder="e.g. Sinking Funds, Side Hustles..." />
         </div>
         <div class="form-group">
-          <label class="form-label">Food (₱)</label>
-          <input class="form-input" id="b-food" type="number" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Critical Bills Fund (₱)</label>
-          <input class="form-input" id="b-bills" type="number" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Emergency Cushion (₱)</label>
-          <input class="form-input" id="b-emergency" type="number" />
-        </div>
-        <div class="form-group">
-          <label class="form-label">Debt Envelopes (₱)</label>
-          <input class="form-input" id="b-envelopes" type="number" />
+          <label class="form-label">Type</label>
+          <select class="form-input" id="sec-type" style="padding:12px; background:var(--bg3)">
+            <option value="income">Income (Adds to Total Income)</option>
+            <option value="expense">Expense (Adds to Budget Breakdown)</option>
+            <option value="envelope">Envelope (Adds to Envelope Split)</option>
+          </select>
         </div>
         <div class="form-actions">
-          <button class="btn-cancel" onclick="closeModal('budget-modal')">Cancel</button>
-          <button class="btn-save" onclick="saveBudget()">Save</button>
+          <button class="btn-cancel" onclick="closeModal('section-modal')">Cancel</button>
+          <button class="btn-save" onclick="saveSection()">Save</button>
         </div>
+        <button class="btn-danger hidden" id="sec-delete-btn" onclick="deleteCurrentSection()">🗑 Delete Section</button>
+      </div>
+    </div>
+
+    <!-- ===========================
+       ITEM MODAL
+  =========================== -->
+    <div class="modal-backdrop hidden" id="item-modal">
+      <div class="modal-sheet">
+        <div class="modal-handle"></div>
+        <div class="modal-title" id="item-modal-title">Add Item</div>
+        <div class="form-group">
+          <label class="form-label">Name</label>
+          <input class="form-input" id="item-name" placeholder="e.g. Salary, Rent, Netflix..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Amount per week (₱)</label>
+          <input class="form-input" id="item-amount" type="number" placeholder="0.00" />
+        </div>
+        <div class="form-actions">
+          <button class="btn-cancel" onclick="closeModal('item-modal')">Cancel</button>
+          <button class="btn-save" onclick="saveItem()">Save</button>
+        </div>
+        <button class="btn-danger hidden" id="item-delete-btn" onclick="deleteCurrentItem()">🗑 Delete Item</button>
       </div>
     </div>
 
@@ -1707,49 +1669,20 @@
     // ============================================================
     // DEFAULT DATA
     // ============================================================
-    const DEFAULT_DEBTS = [
-      { id: 'd1', name: 'Atome Cash', total: 20725.85, min: 6273.17, goal: 6273.17, saved: 0, status: 'Waiting for Upwork' },
-      { id: 'd2', name: 'GCash', total: 7399.56, min: 1057.08, goal: 1057.08, saved: 0, status: '' },
-      { id: 'd3', name: 'Sloan', total: 17822.32, min: 2227.79, goal: 2227.79, saved: 0, status: '' },
-      { id: 'd4', name: 'Maribank', total: 42876.30, min: 3949.13, goal: 3949.13, saved: 0, status: '' },
-      { id: 'd5', name: "Giem's Gcash", total: 1510.11, min: 1510.11, goal: 1510.11, saved: 0, status: '' },
-      { id: 'd6', name: 'Maya', total: 8942.23, min: 8942.23, goal: 0, saved: 0, status: '' },
-    ];
+    const DEFAULT_DEBTS = [];
 
-    const DEFAULT_DUES = [
-      { id: 'du1', name: "Axell's savings", date: '2026-06-18', amount: 200, paid: false },
-      { id: 'du2', name: 'Electricity', date: '2026-06-20', amount: 3861.25, paid: false },
-      { id: 'du3', name: 'Sloan', date: '2026-06-24', amount: 2227.82, paid: false },
-      { id: 'du4', name: 'Alahas', date: '2026-06-25', amount: 0, paid: false },
-      { id: 'du5', name: 'Converge', date: '2026-06-26', amount: 1250, paid: false },
-      { id: 'du6', name: 'Maya', date: '2026-06-30', amount: 6619.43, paid: false },
-      { id: 'du7', name: 'Pldt', date: '2026-07-02', amount: 1399, paid: false },
-      { id: 'du8', name: 'Sloan 3 (6months)', date: '2026-07-04', amount: 2836.14, paid: false },
-      { id: 'du9', name: 'Oven', date: '2026-07-07', amount: 3546.87, paid: false },
-      { id: 'du10', name: 'Sloan 2 (3months)', date: '2026-07-07', amount: 2309.01, paid: false },
-      { id: 'du11', name: 'Maribank', date: '2026-07-09', amount: 3949.17, paid: false },
-      { id: 'du12', name: 'Menjel Atome', date: '2026-07-15', amount: 4075, paid: false },
-      { id: 'du13', name: 'Shoppe VIP renewal', date: '2026-07-15', amount: 0, paid: false },
-    ];
+    const DEFAULT_DUES = [];
 
-    const DEFAULT_BUDGET = {
-      income: 2300,
-      food: 1000,
-      bills: 300,
-      emergency: 200,
-      envelopes: 800,
-    };
-
-    const DEFAULT_ENVELOPE_SPLIT = [
-      { name: 'GCash', amount: 300 },
-      { name: 'Sloan', amount: 300 },
-      { name: 'Maribank', amount: 200 },
+    const DEFAULT_SECTIONS = [
+      { id: 'sec_1', title: '💸 Weekly Income', type: 'income', items: [] },
+      { id: 'sec_2', title: '📋 Budget Breakdown', type: 'expense', items: [] },
+      { id: 'sec_3', title: '✉️ Envelope Split', type: 'envelope', items: [] }
     ];
 
     // ============================================================
     // STATE
     // ============================================================
-    let state = { debts: [], dues: [], budget: {}, envelopeSplit: [] };
+    let state = { debts: [], dues: [], sections: [] };
     let currentSort = 'snowball';
     let editingDebtId = null;
     let editingDueId = null;
@@ -1783,7 +1716,7 @@
           const parsed = JSON.parse(cached);
           if (parsed.debts && parsed.dues) {
             state = parsed;
-            if (!state.envelopeSplit) state.envelopeSplit = DEFAULT_ENVELOPE_SPLIT;
+            if (!state.sections) state.sections = DEFAULT_SECTIONS;
             renderAll(); // Show cached data immediately
           }
         } catch (e) { }
@@ -1796,8 +1729,7 @@
           state = {
             debts: JSON.parse(JSON.stringify(DEFAULT_DEBTS)),
             dues: JSON.parse(JSON.stringify(DEFAULT_DUES)),
-            budget: { ...DEFAULT_BUDGET },
-            envelopeSplit: JSON.parse(JSON.stringify(DEFAULT_ENVELOPE_SPLIT)),
+            sections: JSON.parse(JSON.stringify(DEFAULT_SECTIONS)),
           };
           localSave();
         }
@@ -1820,14 +1752,7 @@
         state = {
           debts: debtsRes.data || [],
           dues: duesRes.data || [],
-          budget: {
-            income: budgetData.income ?? DEFAULT_BUDGET.income,
-            food: budgetData.food ?? DEFAULT_BUDGET.food,
-            bills: budgetData.bills ?? DEFAULT_BUDGET.bills,
-            emergency: budgetData.emergency ?? DEFAULT_BUDGET.emergency,
-            envelopes: budgetData.envelopes ?? DEFAULT_BUDGET.envelopes,
-          },
-          envelopeSplit: budgetData.envelope_split ?? DEFAULT_ENVELOPE_SPLIT,
+          sections: budgetData.sections ?? DEFAULT_SECTIONS,
         };
 
         localSave(); // Update local cache
@@ -1840,8 +1765,7 @@
           state = {
             debts: JSON.parse(JSON.stringify(DEFAULT_DEBTS)),
             dues: JSON.parse(JSON.stringify(DEFAULT_DUES)),
-            budget: { ...DEFAULT_BUDGET },
-            envelopeSplit: JSON.parse(JSON.stringify(DEFAULT_ENVELOPE_SPLIT)),
+            sections: JSON.parse(JSON.stringify(DEFAULT_SECTIONS)),
           };
           renderAll();
         }
@@ -1881,12 +1805,7 @@
         // Save budget
         const budgetToUpsert = {
           id: 1,
-          income: state.budget.income,
-          food: state.budget.food,
-          bills: state.budget.bills,
-          emergency: state.budget.emergency,
-          envelopes: state.budget.envelopes,
-          envelope_split: state.envelopeSplit,
+          sections: state.sections,
         };
 
         const [r1, r2, r3] = await Promise.all([
@@ -1965,7 +1884,7 @@
       activeTab = tab;
 
       const fab = document.getElementById('fab');
-      if (tab === 'debts' || tab === 'due') {
+      if (tab === 'debts' || tab === 'due' || tab === 'planner') {
         fab.classList.remove('hidden');
       } else {
         fab.classList.add('hidden');
@@ -1977,6 +1896,7 @@
     function openAddModal() {
       if (activeTab === 'debts') openDebtModal(null);
       else if (activeTab === 'due') openDueModal(null);
+      else if (activeTab === 'planner') openSectionModal(null);
     }
 
     // ============================================================
@@ -2083,26 +2003,47 @@
       }
 
       // Budget
-      const b = state.budget;
-      const spent = (b.food || 0) + (b.bills || 0) + (b.emergency || 0) + (b.envelopes || 0);
-      document.getElementById('dash-budget').innerHTML = `
-    <div class="budget-row"><span class="label">🍚 Food</span><span class="amount">${fmt(b.food)}</span></div>
-    <div class="budget-row"><span class="label">⚡ Critical Bills Fund</span><span class="amount">${fmt(b.bills)}</span></div>
-    <div class="budget-row"><span class="label">🛡 Emergency Cushion</span><span class="amount">${fmt(b.emergency)}</span></div>
-    <div class="budget-row"><span class="label">✉️ Debt Envelopes</span><span class="amount">${fmt(b.envelopes)}</span></div>
+      const incomeSections = state.sections.filter(s => s.type === 'income');
+      const expenseSections = state.sections.filter(s => s.type === 'expense');
+      const envelopeSections = state.sections.filter(s => s.type === 'envelope');
+
+      const totalIncome = incomeSections.reduce((sum, sec) => sum + sec.items.reduce((s, i) => s + (i.amount || 0), 0), 0);
+      
+      let budgetHtml = '';
+      if (expenseSections.length === 0 || expenseSections.every(s => s.items.length === 0)) {
+        budgetHtml = '<div class="empty-state" style="padding:10px 0;text-align:center;font-size:13px;color:var(--text3)">No budget categories added yet.</div>';
+      } else {
+        expenseSections.forEach(sec => {
+          if (sec.items.length > 0) {
+            budgetHtml += `<div style="font-size:11px; color:var(--text3); padding:8px 0 4px; font-weight:600; text-transform:uppercase;">${sec.title}</div>`;
+            budgetHtml += sec.items.map(c => 
+              `<div class="budget-row"><span class="label">${c.name}</span><span class="amount">${fmt(c.amount)}</span></div>`
+            ).join('');
+          }
+        });
+      }
+
+      document.getElementById('dash-budget').innerHTML = budgetHtml + `
     <div class="divider"></div>
-    <div class="budget-row total"><span class="label">Weekly Income</span><span class="amount">${fmt(b.income)}</span></div>
+    <div class="budget-row total"><span class="label">Total Income</span><span class="amount">${fmt(totalIncome)}</span></div>
   `;
 
       // Envelope split
       const envEl = document.getElementById('dash-envelopes');
-      if (state.envelopeSplit.length > 0) {
-        envEl.innerHTML = state.envelopeSplit.map(e => `
-      <div class="budget-row"><span class="label">${e.name}</span><span class="amount">${fmt(e.amount)}/week</span></div>
-    `).join('') + `
-      <div class="divider"></div>
-      <div style="font-size:12px;color:var(--text3);text-align:center;padding-top:6px">Atome Card & Atome Cash funded via Upwork income</div>
-    `;
+      let envHtml = '';
+      envelopeSections.forEach(sec => {
+        if (sec.items.length > 0) {
+          envHtml += `<div style="font-size:11px; color:var(--text3); padding:8px 0 4px; font-weight:600; text-transform:uppercase;">${sec.title}</div>`;
+          envHtml += sec.items.map(e => `
+            <div class="budget-row"><span class="label">${e.name}</span><span class="amount">${fmt(e.amount)}/week</span></div>
+          `).join('');
+        }
+      });
+      
+      if (envHtml) {
+        envEl.innerHTML = envHtml;
+      } else {
+        envEl.innerHTML = '<div class="empty-state" style="padding:10px 0;text-align:center;font-size:13px;color:var(--text3)">No envelope splits added.</div>';
       }
     }
 
@@ -2251,32 +2192,44 @@
     // RENDER PLANNER
     // ============================================================
     function renderPlanner() {
-      const b = state.budget;
-      document.getElementById('planner-income').textContent = fmt(b.income);
-      document.getElementById('planner-budget').innerHTML = [
-        { label: 'Food', name: '🍚 Food', amount: b.food },
-        { label: 'Critical Bills', name: '⚡ Critical Bills Fund', amount: b.bills },
-        { label: 'Emergency', name: '🛡 Emergency Cushion', amount: b.emergency },
-        { label: 'Debt Envelopes', name: '✉️ Debt Envelopes', amount: b.envelopes },
-      ].map(row => `
-    <div class="planner-item">
-      <div class="planner-item-left">
-        <div class="pi-label">${row.label}</div>
-        <div class="pi-name">${row.name}</div>
-      </div>
-      <div class="planner-item-right">
-        <div class="pi-amount">${fmt(row.amount)}</div>
-        <div class="pi-sub">per week</div>
-      </div>
-    </div>
-  `).join('');
+      const container = document.getElementById('planner-content');
+      if (!container) return;
 
-      document.getElementById('planner-envelope').innerHTML = state.envelopeSplit.map(e => `
-    <div class="env-split-row">
-      <span class="env-split-name">${e.name}</span>
-      <span class="env-split-amount">${fmt(e.amount)}/week</span>
-    </div>
-  `).join('');
+      if (state.sections.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding:40px 16px;text-align:center;color:var(--text3)">No sections added. Tap the + icon below to create one.</div>';
+        return;
+      }
+
+      container.innerHTML = state.sections.map(sec => {
+        let itemsHtml = '';
+        if (sec.items.length === 0) {
+          itemsHtml = '<div class="empty-state" style="padding:10px 0;text-align:center;font-size:13px;color:var(--text3)">No items added.</div>';
+        } else {
+          itemsHtml = sec.items.map(i => `
+            <div class="planner-item" onclick="openItemModal('${sec.id}', '${i.id}')" style="cursor:pointer">
+              <div class="planner-item-left">
+                <div class="pi-name">${i.name}</div>
+              </div>
+              <div class="planner-item-right">
+                <div class="pi-amount">${fmt(i.amount)}</div>
+                <div class="pi-sub">per week</div>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        return `
+          <div class="section-label flex-center" style="justify-content: space-between; margin-top:20px;">
+            <span onclick="openSectionModal('${sec.id}')" style="cursor:pointer; display:flex; align-items:center; gap:5px">
+              ${sec.title} <span style="font-size:12px; color:var(--text3)">✎</span>
+            </span>
+            <button class="btn-ghost" style="padding: 2px 8px; font-size: 16px" onclick="openItemModal('${sec.id}', null); event.stopPropagation()">＋</button>
+          </div>
+          <div class="planner-section">
+            ${itemsHtml}
+          </div>
+        `;
+      }).join('');
     }
 
     // ============================================================
@@ -2427,30 +2380,107 @@
     }
 
     // ============================================================
-    // BUDGET MODAL
+    // DYNAMIC SECTIONS & ITEMS
     // ============================================================
-    function openBudgetModal() {
-      const b = state.budget;
-      document.getElementById('b-income').value = b.income;
-      document.getElementById('b-food').value = b.food;
-      document.getElementById('b-bills').value = b.bills;
-      document.getElementById('b-emergency').value = b.emergency;
-      document.getElementById('b-envelopes').value = b.envelopes;
-      document.getElementById('budget-modal').classList.remove('hidden');
+    let editingSectionId = null;
+    let targetSectionId = null;
+    let editingItemId = null;
+
+    function openSectionModal(id) {
+      editingSectionId = id;
+      const modal = document.getElementById('section-modal');
+      const deleteBtn = document.getElementById('sec-delete-btn');
+      modal.classList.remove('hidden');
+      if (id) {
+        const sec = state.sections.find(s => s.id === id);
+        document.getElementById('section-modal-title').textContent = 'Edit Section';
+        document.getElementById('sec-title').value = sec.title;
+        document.getElementById('sec-type').value = sec.type;
+        deleteBtn.classList.remove('hidden');
+      } else {
+        document.getElementById('section-modal-title').textContent = 'Add Section';
+        document.getElementById('sec-title').value = '';
+        document.getElementById('sec-type').value = 'expense';
+        deleteBtn.classList.add('hidden');
+      }
+    }
+    async function saveSection() {
+      const title = document.getElementById('sec-title').value.trim();
+      const type = document.getElementById('sec-type').value;
+      if (!title) { showToast('⚠️ Please enter a title'); return; }
+      if (editingSectionId) {
+        const idx = state.sections.findIndex(s => s.id === editingSectionId);
+        if (idx > -1) state.sections[idx] = { ...state.sections[idx], title, type };
+      } else {
+        state.sections.push({ id: uid(), title, type, items: [] });
+      }
+      closeModal('section-modal');
+      renderAll();
+      showToast('✓ Section saved!');
+      await saveState();
+    }
+    function deleteCurrentSection() {
+      showConfirm('Delete this section?', 'This will permanently delete all items inside it.', async () => {
+        state.sections = state.sections.filter(s => s.id !== editingSectionId);
+        closeModal('section-modal');
+        renderAll();
+        showToast('🗑 Section deleted');
+        await saveState();
+      });
     }
 
-    async function saveBudget() {
-      state.budget = {
-        income: parseFloat(document.getElementById('b-income').value) || 0,
-        food: parseFloat(document.getElementById('b-food').value) || 0,
-        bills: parseFloat(document.getElementById('b-bills').value) || 0,
-        emergency: parseFloat(document.getElementById('b-emergency').value) || 0,
-        envelopes: parseFloat(document.getElementById('b-envelopes').value) || 0,
-      };
-      closeModal('budget-modal');
+    function openItemModal(secId, itemId) {
+      targetSectionId = secId;
+      editingItemId = itemId;
+      const modal = document.getElementById('item-modal');
+      const deleteBtn = document.getElementById('item-delete-btn');
+      modal.classList.remove('hidden');
+      
+      const sec = state.sections.find(s => s.id === secId);
+      
+      if (itemId) {
+        const item = sec.items.find(i => i.id === itemId);
+        document.getElementById('item-modal-title').textContent = 'Edit Item';
+        document.getElementById('item-name').value = item.name;
+        document.getElementById('item-amount').value = item.amount;
+        deleteBtn.classList.remove('hidden');
+      } else {
+        document.getElementById('item-modal-title').textContent = 'Add Item';
+        document.getElementById('item-name').value = '';
+        document.getElementById('item-amount').value = '';
+        deleteBtn.classList.add('hidden');
+      }
+    }
+    async function saveItem() {
+      const name = document.getElementById('item-name').value.trim();
+      const amount = parseFloat(document.getElementById('item-amount').value) || 0;
+      if (!name) { showToast('⚠️ Please enter a name'); return; }
+      
+      const secIdx = state.sections.findIndex(s => s.id === targetSectionId);
+      if (secIdx === -1) return;
+      
+      if (editingItemId) {
+        const itemIdx = state.sections[secIdx].items.findIndex(i => i.id === editingItemId);
+        if (itemIdx > -1) state.sections[secIdx].items[itemIdx] = { ...state.sections[secIdx].items[itemIdx], name, amount };
+      } else {
+        state.sections[secIdx].items.push({ id: uid(), name, amount });
+      }
+      closeModal('item-modal');
       renderAll();
-      showToast('✓ Budget updated!');
+      showToast('✓ Item saved!');
       await saveState();
+    }
+    function deleteCurrentItem() {
+      showConfirm('Delete this item?', 'This will remove the item from the section.', async () => {
+        const secIdx = state.sections.findIndex(s => s.id === targetSectionId);
+        if (secIdx > -1) {
+          state.sections[secIdx].items = state.sections[secIdx].items.filter(i => i.id !== editingItemId);
+        }
+        closeModal('item-modal');
+        renderAll();
+        showToast('🗑 Item deleted');
+        await saveState();
+      });
     }
 
     // ============================================================
@@ -2525,17 +2555,23 @@
       event.target.value = '';
     }
 
-    async function resetData() {
-      state = {
-        debts: JSON.parse(JSON.stringify(DEFAULT_DEBTS)),
-        dues: JSON.parse(JSON.stringify(DEFAULT_DUES)),
-        budget: { ...DEFAULT_BUDGET },
-        envelopeSplit: JSON.parse(JSON.stringify(DEFAULT_ENVELOPE_SPLIT)),
-      };
-      renderAll();
-      showToast('🔄 Data reset to defaults');
-      await saveState();
+
+    // ============================================================
+    // KEEP-ALIVE — prevents Supabase free-tier project from pausing
+    // Runs a lightweight SELECT on app load + every 4 days while open
+    // ============================================================
+    async function keepAlive() {
+      try {
+        await sb.from('budget').select('id').limit(1);
+        console.log('[KeepAlive] Supabase ping successful ✓');
+      } catch (e) {
+        console.warn('[KeepAlive] Ping failed (offline?):', e.message);
+      }
     }
+
+    const FOUR_DAYS_MS = 4 * 24 * 60 * 60 * 1000;
+    keepAlive(); // ping immediately on load
+    setInterval(keepAlive, FOUR_DAYS_MS); // repeat every 4 days if app stays open
 
     // ============================================================
     // INIT
