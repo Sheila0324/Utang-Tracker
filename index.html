@@ -1384,6 +1384,146 @@
       font-size: 36px;
       margin-bottom: 4px;
     }
+
+    /* ===========================
+       TOGGLE SWITCH
+    =========================== */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+    }
+    .toggle-label { font-size: 14px; font-weight: 600; }
+    .toggle-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 26px;
+      flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: var(--bg3);
+      border-radius: 99px;
+      transition: 0.3s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: 0.3s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--indigo); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
+
+    /* ===========================
+       SCHEDULE SECTION
+    =========================== */
+    .schedule-section {
+      background: rgba(99,102,241,0.07);
+      border: 1px solid rgba(99,102,241,0.2);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin-top: 8px;
+      animation: fadeSlideIn 0.2s ease;
+    }
+    .schedule-summary {
+      font-size: 12px;
+      color: var(--indigo-light);
+      background: rgba(99,102,241,0.12);
+      border-radius: var(--radius-xs);
+      padding: 8px 12px;
+      margin-top: 10px;
+      line-height: 1.6;
+      white-space: pre-line;
+    }
+    .reminder-section {
+      background: rgba(245,158,11,0.07);
+      border: 1px solid rgba(245,158,11,0.2);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      margin-top: 8px;
+      animation: fadeSlideIn 0.2s ease;
+    }
+    .section-divider {
+      height: 1px;
+      background: var(--border2);
+      margin: 14px 0 8px;
+    }
+
+    /* ===========================
+       INSTALLMENT DUE ITEMS
+    =========================== */
+    .installment-tag {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--indigo-light);
+      background: rgba(99,102,241,0.15);
+      border-radius: 99px;
+      padding: 2px 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    /* ===========================
+       NOTIFICATION BANNER
+    =========================== */
+    .notif-banner {
+      background: var(--amber-bg);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 16px 12px;
+      font-size: 13px;
+    }
+    .notif-banner.hidden { display: none; }
+    .notif-banner-text { flex: 1; line-height: 1.4; }
+    .notif-banner-btn {
+      background: var(--amber);
+      color: #000;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 6px 14px;
+      border-radius: 99px;
+      flex-shrink: 0;
+      cursor: pointer;
+      border: none;
+    }
+
+    /* ===========================
+       DEBT SCHEDULE BADGE
+    =========================== */
+    .debt-schedule-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 8px 10px;
+      background: rgba(99,102,241,0.08);
+      border-radius: var(--radius-xs);
+      font-size: 12px;
+      color: var(--text2);
+    }
+    .debt-next-due { font-weight: 700; }
+    .installment-progress {
+      margin-left: auto;
+      font-weight: 600;
+      color: var(--text3);
+    }
   </style>
 </head>
 
@@ -1462,11 +1602,16 @@
 
     <!-- ===========================
        DUE DATES TAB
-  =========================== -->
+   =========================== -->
     <div id="tab-due" class="tab-panel">
       <div class="page-header">
         <h1>📅 Due Dates</h1>
         <p id="due-subtitle">Loading...</p>
+      </div>
+      <div class="notif-banner hidden" id="notif-banner">
+        <span style="font-size:20px">🔔</span>
+        <div class="notif-banner-text"><strong>Enable Reminders</strong><br>Allow notifications to get reminded before due dates.</div>
+        <button class="notif-banner-btn" onclick="enableNotifications()">Allow</button>
       </div>
       <div id="due-list"></div>
       <div style="height: 8px;"></div>
@@ -1516,7 +1661,7 @@
 
     <!-- ===========================
        DEBT MODAL
-  =========================== -->
+   =========================== -->
     <div class="modal-backdrop hidden" id="debt-modal">
       <div class="modal-sheet">
         <div class="modal-handle"></div>
@@ -1528,7 +1673,7 @@
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Total Debt (₱)</label>
-            <input class="form-input" id="debt-total" type="number" placeholder="0.00" />
+            <input class="form-input" id="debt-total" type="number" placeholder="0.00" oninput="calcMonthlyAmount()" />
           </div>
           <div class="form-group">
             <label class="form-label">Monthly Min (₱)</label>
@@ -1549,7 +1694,70 @@
           <label class="form-label">Status (optional)</label>
           <input class="form-input" id="debt-status" placeholder="e.g. Waiting for Upwork..." />
         </div>
-        <div class="form-actions">
+
+        <div class="section-divider"></div>
+
+        <!-- Payment Schedule -->
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">📅 Payment Schedule</div>
+            <div class="toggle-sub">Set recurring monthly installments</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="schedule-enabled" onchange="toggleScheduleUI()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div id="schedule-fields" class="hidden">
+          <div class="schedule-section">
+            <div class="form-row">
+              <div class="form-group" style="margin-bottom:10px">
+                <label class="form-label">Pay on Day</label>
+                <input class="form-input" id="schedule-day" type="number" min="1" max="28" placeholder="15" oninput="calcMonthlyAmount()" />
+              </div>
+              <div class="form-group" style="margin-bottom:10px">
+                <label class="form-label">No. of Months</label>
+                <input class="form-input" id="schedule-months" type="number" min="1" max="60" placeholder="6" oninput="calcMonthlyAmount()" />
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:10px">
+              <label class="form-label">Starting Month</label>
+              <select class="form-input" id="schedule-start-month" style="background:var(--bg3)" onchange="calcMonthlyAmount()"></select>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label class="form-label">Monthly Payment (₱) <span style="color:var(--text3);font-weight:400">(auto-calculated)</span></label>
+              <input class="form-input" id="schedule-monthly-amount" type="number" placeholder="Leave blank to auto-calculate" />
+            </div>
+            <div class="schedule-summary hidden" id="schedule-summary"></div>
+          </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <!-- Reminders -->
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">🔔 Reminders</div>
+            <div class="toggle-sub">Get notified before due date</div>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="reminder-enabled" onchange="toggleReminderUI()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div id="reminder-fields" class="hidden">
+          <div class="reminder-section">
+            <label class="form-label">Remind me</label>
+            <select class="form-input" id="reminder-days" style="background:var(--bg3)">
+              <option value="0">On the due date (morning)</option>
+              <option value="1" selected>1 day before</option>
+              <option value="3">3 days before</option>
+              <option value="7">7 days before</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-actions" style="margin-top:20px">
           <button class="btn-cancel" onclick="closeModal('debt-modal')">Cancel</button>
           <button class="btn-save" onclick="saveDebt()">Save</button>
         </div>
@@ -1793,7 +2001,8 @@
         // Save debts
         const debtsToUpsert = state.debts.map(d => ({
           id: d.id, name: d.name, total: d.total, min: d.min,
-          goal: d.goal, saved: d.saved, status: d.status || ''
+          goal: d.goal, saved: d.saved, status: d.status || '',
+          schedule: d.schedule || null
         }));
 
         // Save dues
@@ -1917,8 +2126,9 @@
       document.getElementById('dash-progress-label-right').textContent = pct + '%';
 
       // Stats
-      const overdue = state.dues.filter(d => !d.paid && daysUntil(d.date) < 0).length;
-      const upcoming = state.dues.filter(d => !d.paid && daysUntil(d.date) >= 0 && daysUntil(d.date) <= 7).length;
+      const allDueForStats = [...state.dues, ...computeInstallments()];
+      const overdue = allDueForStats.filter(d => !d.paid && daysUntil(d.date) < 0).length;
+      const upcoming = allDueForStats.filter(d => !d.paid && daysUntil(d.date) >= 0 && daysUntil(d.date) <= 7).length;
       document.getElementById('dash-stats').innerHTML = `
     <div class="dash-stat-card">
       <div class="stat-val">${debts.length}</div>
@@ -1932,8 +2142,8 @@
 
       // Alert
       const alertArea = document.getElementById('dash-alert-area');
-      const overdueItems = state.dues.filter(d => !d.paid && daysUntil(d.date) < 0);
-      const soonItems = state.dues.filter(d => !d.paid && daysUntil(d.date) >= 0 && daysUntil(d.date) <= 3);
+      const overdueItems = allDueForStats.filter(d => !d.paid && daysUntil(d.date) < 0);
+      const soonItems = allDueForStats.filter(d => !d.paid && daysUntil(d.date) >= 0 && daysUntil(d.date) <= 3);
       if (overdueItems.length > 0) {
         alertArea.innerHTML = `<div class="alert-card danger">
       <div class="alert-icon">⚠️</div>
@@ -1979,8 +2189,9 @@
     `;
       }
 
-      // Next due date
-      const nextDues = state.dues.filter(d => !d.paid).sort((a, b) => a.date.localeCompare(b.date));
+      // Next due date (from standalone dues + debt installments)
+      const allDueItems = [...state.dues, ...computeInstallments()];
+      const nextDues = allDueItems.filter(d => !d.paid).sort((a, b) => a.date.localeCompare(b.date));
       const nextDue = nextDues[0];
       const nextDueEl = document.getElementById('dash-next-due');
       if (nextDue) {
@@ -2091,6 +2302,30 @@
         const progressClass = pct >= 100 ? 'success' : pct >= 50 ? 'amber' : '';
         const statusBadge = d.status ? `<span class="badge badge-sky">${d.status}</span>` : '';
         const rankBadge = currentSort === 'snowball' && i === 0 ? `<span class="badge badge-indigo">❄️ Target</span>` : '';
+
+        // Schedule row
+        let schedHtml = '';
+        if (d.schedule && d.schedule.enabled) {
+          const installs = computeInstallments().filter(inst => inst.debtId === d.id);
+          const nextInst = installs.filter(inst => !inst.paid).sort((a, b) => a.date.localeCompare(b.date))[0];
+          const paidCount = (d.schedule.paidInstallments || []).length;
+          const totalCount = d.schedule.numMonths;
+          const remIcon = d.schedule.reminderEnabled ? ' 🔔' : '';
+          if (nextInst) {
+            const days = daysUntil(nextInst.date);
+            const daysText = days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Today!' : `in ${days}d`;
+            const urgencyColor = days < 0 ? 'var(--red)' : days <= 7 ? 'var(--amber)' : 'var(--indigo-light)';
+            const nextDt = parseDate(nextInst.date);
+            schedHtml = `<div class="debt-schedule-row">
+              <span>📅</span>
+              <span>Next: <span class="debt-next-due" style="color:${urgencyColor}">${MONTHS[nextDt.getMonth()]} ${nextDt.getDate()} (${daysText})</span></span>
+              <span class="installment-progress">${paidCount}/${totalCount} paid${remIcon}</span>
+            </div>`;
+          } else {
+            schedHtml = `<div class="debt-schedule-row"><span>🎉</span><span>All ${totalCount} installments paid!</span></div>`;
+          }
+        }
+
         return `
       <div class="debt-card" onclick="openDebtModal('${d.id}')" style="animation-delay:${i * 0.05}s">
         <div class="debt-card-top">
@@ -2122,6 +2357,7 @@
             <div class="meta-val">${d.goal ? fmt(d.goal) : '—'}</div>
           </div>
         </div>
+        ${schedHtml}
       </div>
     `;
       }).join('');
@@ -2131,15 +2367,23 @@
     // RENDER DUE DATES
     // ============================================================
     function renderDue() {
-      const dues = [...state.dues].sort((a, b) => a.date.localeCompare(b.date));
+      // Merge standalone dues + installments from debt schedules
+      const installments = computeInstallments();
+      const dues = [
+        ...state.dues.map(d => ({ ...d, isInstallment: false })),
+        ...installments
+      ].sort((a, b) => a.date.localeCompare(b.date));
+
       const unpaid = dues.filter(d => !d.paid).length;
       const totalDue = dues.filter(d => !d.paid && d.amount).reduce((s, d) => s + d.amount, 0);
       document.getElementById('due-subtitle').textContent =
         `${unpaid} pending • ${fmt(totalDue)} total`;
 
+      checkAndShowNotifBanner();
+
       const container = document.getElementById('due-list');
       if (dues.length === 0) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>No due dates yet. Tap + to add one.</p></div>`;
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">📅</div><p>No due dates yet.<br><span style="font-size:13px">Add a debt and enable Payment Schedule to get started.</span></p></div>`;
         return;
       }
 
@@ -2147,13 +2391,13 @@
       const groups = {};
       dues.forEach(d => {
         const dt = parseDate(d.date);
-        const key = `${dt.getFullYear()}-${dt.getMonth()}`;
+        const key = `${dt.getFullYear()}-${String(dt.getMonth()).padStart(2,'0')}`;
         if (!groups[key]) groups[key] = { label: MONTHS_FULL[dt.getMonth()] + ' ' + dt.getFullYear(), items: [] };
         groups[key].items.push(d);
       });
 
       container.innerHTML = Object.values(groups).map(g => {
-        const rows = g.items.map((d, i) => {
+        const rows = g.items.map(d => {
           const days = daysUntil(d.date);
           const dt = parseDate(d.date);
           let badgeClass = '';
@@ -2165,21 +2409,36 @@
           const urgencyBadge = !d.paid && days < 0 ? `<span class="badge badge-red">Overdue</span>` :
             !d.paid && days === 0 ? `<span class="badge badge-red">Today!</span>` :
               !d.paid && days <= 3 ? `<span class="badge badge-amber">Soon</span>` :
-                d.paid ? `<span class="badge badge-emerald">Paid</span>` : '';
+                d.paid ? `<span class="badge badge-emerald">Paid ✓</span>` : '';
+
+          const installmentBadge = d.isInstallment
+            ? `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.installmentIndex + 1} of ${d.installmentTotal}</span></div>`
+            : '';
+
+          const reminderIcon = d.reminderEnabled ? ' 🔔' : '';
+
+          const clickAction = d.isInstallment
+            ? `openDebtModal('${d.debtId}')`
+            : `openDueModal('${d.id}')`;
+
+          const checkAction = d.isInstallment
+            ? `toggleInstallmentPaid(event,'${d.debtId}',${d.installmentIndex})`
+            : `togglePaid(event,'${d.id}')`;
 
           return `
-        <div class="due-item ${d.paid ? 'paid' : ''}" onclick="openDueModal('${d.id}')">
+        <div class="due-item ${d.paid ? 'paid' : ''}" onclick="${clickAction}">
           <div class="due-date-badge ${badgeClass}">
             <div class="day" style="${dayStyle}">${dt.getDate()}</div>
             <div class="month">${MONTHS[dt.getMonth()]}</div>
           </div>
           <div class="due-item-info">
-            <div class="due-item-name">${d.name}</div>
+            <div class="due-item-name">${d.name}${reminderIcon}</div>
             <div class="due-item-amount">${d.amount ? fmt(d.amount) : 'Amount TBD'}</div>
+            ${installmentBadge}
           </div>
           <div class="due-item-right">
             ${urgencyBadge}
-            <button class="check-btn ${d.paid ? 'checked' : ''}" onclick="togglePaid(event,'${d.id}')">${d.paid ? '✓' : ''}</button>
+            <button class="check-btn ${d.paid ? 'checked' : ''}" onclick="${checkAction}">${d.paid ? '✓' : ''}</button>
           </div>
         </div>
       `;
@@ -2243,6 +2502,159 @@
     }
 
     // ============================================================
+    // SCHEDULE HELPERS
+    // ============================================================
+    function populateStartMonths() {
+      const sel = document.getElementById('schedule-start-month');
+      if (!sel) return;
+      const currentVal = sel.value;
+      sel.innerHTML = '';
+      const now = new Date();
+      for (let i = 0; i < 24; i++) {
+        let m = now.getMonth() + i;
+        let y = now.getFullYear() + Math.floor(m / 12);
+        m = m % 12;
+        const opt = document.createElement('option');
+        opt.value = `${y}-${m}`;
+        opt.textContent = MONTHS_FULL[m] + ' ' + y;
+        if (opt.value === currentVal) opt.selected = true;
+        sel.appendChild(opt);
+      }
+    }
+
+    function toggleScheduleUI() {
+      const enabled = document.getElementById('schedule-enabled').checked;
+      const fields = document.getElementById('schedule-fields');
+      if (enabled) {
+        fields.classList.remove('hidden');
+        populateStartMonths();
+        calcMonthlyAmount();
+      } else {
+        fields.classList.add('hidden');
+      }
+    }
+
+    function toggleReminderUI() {
+      const enabled = document.getElementById('reminder-enabled').checked;
+      document.getElementById('reminder-fields').classList.toggle('hidden', !enabled);
+    }
+
+    function calcMonthlyAmount() {
+      const schedEnabled = document.getElementById('schedule-enabled')?.checked;
+      if (!schedEnabled) return;
+      const total = parseFloat(document.getElementById('debt-total')?.value) || 0;
+      const months = parseInt(document.getElementById('schedule-months')?.value) || 0;
+      const summaryEl = document.getElementById('schedule-summary');
+      if (!summaryEl) return;
+      if (total > 0 && months > 0) {
+        summaryEl.classList.remove('hidden');
+        const monthly = total / months;
+        const monthlyInput = document.getElementById('schedule-monthly-amount');
+        if (monthlyInput && !monthlyInput.value) {
+          monthlyInput.placeholder = monthly.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        const startVal = document.getElementById('schedule-start-month')?.value;
+        const day = parseInt(document.getElementById('schedule-day')?.value) || 15;
+        let summaryText = `₱${monthly.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / month × ${months} months`;
+        if (startVal) {
+          const [sy, sm] = startVal.split('-').map(Number);
+          let endM = sm + months - 1;
+          let endY = sy + Math.floor(endM / 12);
+          endM = endM % 12;
+          summaryText += `\nDay ${day} each month · ${MONTHS[sm]} ${sy} → ${MONTHS[endM]} ${endY}`;
+        }
+        summaryEl.textContent = summaryText;
+      } else {
+        summaryEl.classList.add('hidden');
+      }
+    }
+
+    // ============================================================
+    // COMPUTE INSTALLMENTS FROM DEBT SCHEDULES
+    // ============================================================
+    function computeInstallments() {
+      const items = [];
+      state.debts.forEach(debt => {
+        if (!debt.schedule || !debt.schedule.enabled) return;
+        const { dueDay = 15, numMonths = 1, startYear, startMonth, monthlyAmount = 0, paidInstallments = [], reminderEnabled = false, reminderDaysBefore = 1 } = debt.schedule;
+        if (startYear === undefined || startMonth === undefined) return;
+        for (let i = 0; i < numMonths; i++) {
+          let m = startMonth + i;
+          let y = startYear + Math.floor(m / 12);
+          m = m % 12;
+          const lastDay = new Date(y, m + 1, 0).getDate();
+          const day = Math.min(dueDay, lastDay);
+          const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          items.push({
+            id: `inst_${debt.id}_${i}`,
+            debtId: debt.id,
+            debtName: debt.name,
+            installmentIndex: i,
+            installmentTotal: numMonths,
+            name: debt.name,
+            date: dateStr,
+            amount: monthlyAmount,
+            paid: (paidInstallments || []).includes(i),
+            isInstallment: true,
+            reminderEnabled,
+            reminderDaysBefore
+          });
+        }
+      });
+      return items;
+    }
+
+    // ============================================================
+    // NOTIFICATIONS
+    // ============================================================
+    async function enableNotifications() {
+      if (!('Notification' in window)) {
+        showToast('⚠️ Notifications not supported on this browser');
+        return;
+      }
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        document.getElementById('notif-banner')?.classList.add('hidden');
+        showToast('🔔 Notifications enabled!');
+        checkReminders();
+      } else {
+        showToast('⚠️ Notification permission denied');
+      }
+    }
+
+    function checkAndShowNotifBanner() {
+      if (!('Notification' in window)) return;
+      const hasReminders = state.debts.some(d => d.schedule?.enabled && d.schedule?.reminderEnabled);
+      const banner = document.getElementById('notif-banner');
+      if (banner) {
+        banner.classList.toggle('hidden', !hasReminders || Notification.permission !== 'default');
+      }
+    }
+
+    function checkReminders() {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const allItems = [...state.dues, ...computeInstallments()];
+      allItems.forEach(due => {
+        if (due.paid || !due.reminderEnabled) return;
+        const daysBefore = parseInt(due.reminderDaysBefore ?? 1);
+        const days = daysUntil(due.date);
+        if (days === daysBefore || (daysBefore === 0 && days === 0)) {
+          const key = `notif_${due.id}_${todayStr}`;
+          if (!localStorage.getItem(key)) {
+            const body = daysBefore === 0
+              ? `Due TODAY: ${due.name} — ${fmt(due.amount)}`
+              : `Due in ${daysBefore} day${daysBefore > 1 ? 's' : ''}: ${due.name} — ${fmt(due.amount)}`;
+            try {
+              new Notification('💸 Utang Tracker', { body });
+              localStorage.setItem(key, '1');
+            } catch(e) {}
+          }
+        }
+      });
+    }
+
+    // ============================================================
     // DEBT MODAL
     // ============================================================
     function openDebtModal(id) {
@@ -2250,6 +2662,8 @@
       const modal = document.getElementById('debt-modal');
       const deleteBtn = document.getElementById('debt-delete-btn');
       modal.classList.remove('hidden');
+
+      populateStartMonths();
 
       if (id) {
         const debt = state.debts.find(d => d.id === id);
@@ -2261,6 +2675,33 @@
         document.getElementById('debt-saved').value = debt.saved || '';
         document.getElementById('debt-status').value = debt.status || '';
         deleteBtn.classList.remove('hidden');
+
+        // Load schedule
+        const sched = debt.schedule;
+        const schedEnabled = sched && sched.enabled;
+        document.getElementById('schedule-enabled').checked = schedEnabled || false;
+        document.getElementById('schedule-fields').classList.toggle('hidden', !schedEnabled);
+        if (schedEnabled) {
+          document.getElementById('schedule-day').value = sched.dueDay || 15;
+          document.getElementById('schedule-months').value = sched.numMonths || '';
+          document.getElementById('schedule-monthly-amount').value = sched.monthlyAmount || '';
+          const startVal = `${sched.startYear}-${sched.startMonth}`;
+          const sel = document.getElementById('schedule-start-month');
+          if (sel) {
+            for (let opt of sel.options) {
+              if (opt.value === startVal) { opt.selected = true; break; }
+            }
+          }
+          calcMonthlyAmount();
+        }
+
+        // Load reminder
+        const remEnabled = sched && sched.reminderEnabled;
+        document.getElementById('reminder-enabled').checked = remEnabled || false;
+        document.getElementById('reminder-fields').classList.toggle('hidden', !remEnabled);
+        if (remEnabled) {
+          document.getElementById('reminder-days').value = sched.reminderDaysBefore ?? 1;
+        }
       } else {
         document.getElementById('debt-modal-title').textContent = 'Add Debt';
         document.getElementById('debt-name').value = '';
@@ -2270,6 +2711,20 @@
         document.getElementById('debt-saved').value = '';
         document.getElementById('debt-status').value = '';
         deleteBtn.classList.add('hidden');
+
+        // Reset schedule
+        document.getElementById('schedule-enabled').checked = false;
+        document.getElementById('schedule-fields').classList.add('hidden');
+        document.getElementById('schedule-day').value = '';
+        document.getElementById('schedule-months').value = '';
+        document.getElementById('schedule-monthly-amount').value = '';
+        document.getElementById('schedule-summary').textContent = '';
+        document.getElementById('schedule-summary').classList.add('hidden');
+
+        // Reset reminder
+        document.getElementById('reminder-enabled').checked = false;
+        document.getElementById('reminder-fields').classList.add('hidden');
+        document.getElementById('reminder-days').value = '1';
       }
     }
 
@@ -2283,17 +2738,46 @@
 
       if (!name) { showToast('⚠️ Please enter a name'); return; }
 
+      // Build schedule
+      const schedEnabled = document.getElementById('schedule-enabled').checked;
+      let schedule = null;
+      if (schedEnabled) {
+        const dueDay = parseInt(document.getElementById('schedule-day').value) || 15;
+        const numMonths = parseInt(document.getElementById('schedule-months').value) || 1;
+        const startVal = document.getElementById('schedule-start-month').value;
+        const [startYear, startMonth] = startVal ? startVal.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth()];
+        const customMonthly = parseFloat(document.getElementById('schedule-monthly-amount').value);
+        const monthlyAmount = customMonthly > 0 ? customMonthly : (total > 0 && numMonths > 0 ? Math.round((total / numMonths) * 100) / 100 : 0);
+        const reminderEnabled = document.getElementById('reminder-enabled').checked;
+        const reminderDaysBefore = parseInt(document.getElementById('reminder-days').value) || 1;
+        // Preserve paid installments if editing
+        let paidInstallments = [];
+        if (editingDebtId) {
+          const existing = state.debts.find(d => d.id === editingDebtId);
+          paidInstallments = existing?.schedule?.paidInstallments || [];
+        }
+        schedule = { enabled: true, dueDay, numMonths, startYear, startMonth, monthlyAmount, reminderEnabled, reminderDaysBefore, paidInstallments };
+      } else if (editingDebtId) {
+        const existing = state.debts.find(d => d.id === editingDebtId);
+        if (existing?.schedule) schedule = { ...existing.schedule, enabled: false };
+      }
+
       if (editingDebtId) {
         const idx = state.debts.findIndex(d => d.id === editingDebtId);
-        if (idx > -1) state.debts[idx] = { ...state.debts[idx], name, total, min, goal, saved, status };
+        if (idx > -1) state.debts[idx] = { ...state.debts[idx], name, total, min, goal, saved, status, schedule };
       } else {
-        state.debts.push({ id: uid(), name, total, min, goal, saved, status });
+        state.debts.push({ id: uid(), name, total, min, goal, saved, status, schedule });
       }
 
       closeModal('debt-modal');
       renderAll();
       showToast('✓ Debt saved!');
       await saveState();
+
+      if (schedule?.reminderEnabled) {
+        checkAndShowNotifBanner();
+        checkReminders();
+      }
     }
 
     function deleteCurrentDebt() {
@@ -2377,6 +2861,23 @@
         showToast(state.dues[idx].paid ? '✅ Marked as paid!' : '↩️ Marked as unpaid');
         await saveState();
       }
+    }
+
+    async function toggleInstallmentPaid(event, debtId, installmentIndex) {
+      event.stopPropagation();
+      const debtIdx = state.debts.findIndex(d => d.id === debtId);
+      if (debtIdx === -1 || !state.debts[debtIdx].schedule) return;
+      const paid = state.debts[debtIdx].schedule.paidInstallments || [];
+      const idx = paid.indexOf(installmentIndex);
+      if (idx > -1) {
+        paid.splice(idx, 1);
+      } else {
+        paid.push(installmentIndex);
+      }
+      state.debts[debtIdx].schedule.paidInstallments = paid;
+      renderAll();
+      showToast(idx > -1 ? '↩️ Marked as unpaid' : '✅ Installment paid!');
+      await saveState();
     }
 
     // ============================================================
@@ -2579,6 +3080,8 @@
     (async () => {
       await loadState();
       renderAll();
+      checkReminders();
+      checkAndShowNotifBanner();
     })();
 
     // Animate progress bars after a short delay
