@@ -183,7 +183,7 @@
       flex-direction: column;
       align-items: center;
       gap: 4px;
-      padding: 8px 16px;
+      padding: 8px 4px;
       border-radius: var(--radius-sm);
       transition: all 0.2s ease;
       flex: 1;
@@ -910,12 +910,6 @@
       background: var(--surface);
       border: 1px solid var(--border2);
       border-radius: var(--radius-sm);
-      transition: transform 0.15s ease;
-      cursor: pointer;
-    }
-
-    .due-item:active {
-      transform: scale(0.98);
     }
 
     .due-item.paid {
@@ -984,21 +978,28 @@
     }
 
     .check-btn {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      border: 2px solid var(--bg3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      transition: all 0.2s ease;
+      padding: 6px 12px;
+      border-radius: 99px;
+      border: 1.5px solid var(--border2);
+      background: var(--bg2);
+      color: var(--text2);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      transition: all 0.15s ease;
       flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .check-btn:active {
+      transform: scale(0.95);
     }
 
     .check-btn.checked {
-      background: var(--emerald);
-      border-color: var(--emerald);
+      background: var(--emerald-bg);
+      color: var(--emerald-light);
+      border-color: rgba(16, 185, 129, 0.3);
     }
 
     /* ===========================
@@ -1644,10 +1645,7 @@
         <div class="card" id="dash-budget"></div>
       </div>
 
-      <div class="section-label">✉️ Envelope Split</div>
-      <div style="padding: 0 16px;">
-        <div class="card" id="dash-envelopes"></div>
-      </div>
+
 
       <div style="height: 8px;"></div>
     </div>
@@ -1678,6 +1676,11 @@
         <h1>📅 Due Dates</h1>
         <p id="due-subtitle">Loading...</p>
       </div>
+      <div class="sort-bar" id="due-filter-bar" style="margin-bottom: 12px;">
+        <button class="sort-chip active" data-filter="all" onclick="setDueFilter('all')">🌐 All</button>
+        <button class="sort-chip" data-filter="month" onclick="setDueFilter('month')">📅 This Month</button>
+        <button class="sort-chip" data-filter="30days" onclick="setDueFilter('30days')">⏳ Next 30 Days</button>
+      </div>
       <div class="notif-banner hidden" id="notif-banner">
         <span style="font-size:20px">🔔</span>
         <div class="notif-banner-text"><strong>Enable Reminders</strong><br>Allow notifications to get reminded before
@@ -1685,6 +1688,21 @@
         <button class="notif-banner-btn" onclick="enableNotifications()">Allow</button>
       </div>
       <div id="due-list"></div>
+      <div style="height: 8px;"></div>
+    </div>
+
+    <!-- ===========================
+       HISTORY TAB
+    =========================== -->
+    <div id="tab-history" class="tab-panel">
+      <div class="page-header">
+        <h1>📜 History</h1>
+        <p id="history-subtitle">0 completed debts • 0 paid payments</p>
+      </div>
+      <div class="section-label">🏆 Completed Debts</div>
+      <div id="history-debts-list"></div>
+      <div class="section-label">✅ Paid Payments</div>
+      <div id="history-dues-list"></div>
       <div style="height: 8px;"></div>
     </div>
 
@@ -1720,6 +1738,10 @@
       <button class="nav-btn" id="nav-due" onclick="switchTab('due')">
         <span class="nav-icon">📅</span>
         <span class="nav-label">Due Dates</span>
+      </button>
+      <button class="nav-btn" id="nav-history" onclick="switchTab('history')">
+        <span class="nav-icon">📜</span>
+        <span class="nav-label">History</span>
       </button>
       <button class="nav-btn" id="nav-planner" onclick="switchTab('planner')">
         <span class="nav-icon">⚙️</span>
@@ -1772,26 +1794,10 @@
         </div>
         <div id="schedule-fields" class="hidden">
           <div class="schedule-section">
-            <div class="form-row">
-              <div class="form-group" style="margin-bottom:10px">
-                <label class="form-label">Pay on Day</label>
-                <input class="form-input" id="schedule-day" type="number" min="1" max="28" placeholder="15"
-                  oninput="calcMonthlyAmount()" />
-              </div>
-              <div class="form-group" style="margin-bottom:10px">
-                <label class="form-label">No. of Months</label>
-                <input class="form-input" id="schedule-months" type="number" min="1" max="60" placeholder="e.g. 6"
-                  oninput="onMonthsInput()" />
-              </div>
-            </div>
             <div class="form-group" style="margin-bottom:10px">
-              <label class="form-label">Starting Month</label>
-              <div class="form-row" style="gap:8px; margin-bottom:0">
-                <select class="form-input" id="schedule-start-month-m" style="background:var(--bg3); flex: 2;"
-                  onchange="onStartMonthChange()"></select>
-                <input class="form-input" type="number" id="schedule-start-month-y"
-                  style="background:var(--bg3); flex: 1.2;" placeholder="Year" oninput="onStartMonthChange()" />
-              </div>
+              <label class="form-label">Pay on Day</label>
+              <input class="form-input" id="schedule-day" type="number" min="1" max="28" placeholder="15"
+                oninput="calcMonthlyAmount()" />
             </div>
             <div class="form-group" style="margin-bottom:10px">
               <label class="form-label">Ending Month</label>
@@ -1803,7 +1809,7 @@
               </div>
             </div>
 
-            <div class="schedule-summary hidden" id="schedule-summary"></div>
+
           </div>
         </div>
 
@@ -1823,20 +1829,29 @@
         <div id="reminder-fields" class="hidden">
           <div class="reminder-section" style="padding-top:10px">
             <!-- List of added reminders -->
-            <div id="reminders-list" style="margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;"></div>
+            <div id="reminders-list" style="margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
+            </div>
 
             <!-- Configure new reminder panel -->
-            <div style="background: var(--surface2); padding: 12px; border-radius: var(--radius-sm); border: 1px dashed var(--border);">
-              <label class="form-label" style="font-size: 11px; text-transform: uppercase; color: var(--indigo-light); margin-bottom: 8px; display: block;">Configure New Reminder</label>
+            <div
+              style="background: var(--surface2); padding: 12px; border-radius: var(--radius-sm); border: 1px dashed var(--border);">
+              <label class="form-label"
+                style="font-size: 11px; text-transform: uppercase; color: var(--indigo-light); margin-bottom: 8px; display: block;">Configure
+                New Reminder</label>
               <div class="reminder-options">
-                <button type="button" class="reminder-tab active" id="reminder-type-due" onclick="setReminderType('due')">On due date</button>
-                <button type="button" class="reminder-tab" id="reminder-type-days" onclick="setReminderType('days')">Days before</button>
+                <button type="button" class="reminder-tab active" id="reminder-type-due"
+                  onclick="setReminderType('due')">On due date</button>
+                <button type="button" class="reminder-tab" id="reminder-type-days"
+                  onclick="setReminderType('days')">Days before</button>
               </div>
-              <div id="reminder-days-input-container" class="hidden" style="margin-top: 10px; animation: fadeSlideIn 0.2s ease;">
+              <div id="reminder-days-input-container" class="hidden"
+                style="margin-top: 10px; animation: fadeSlideIn 0.2s ease;">
                 <label class="form-label">Number of Days Before</label>
-                <input class="form-input" type="number" id="reminder-days-input" min="1" max="90" placeholder="e.g. 3" style="background:var(--bg3)" />
+                <input class="form-input" type="number" id="reminder-days-input" min="1" max="90" placeholder="e.g. 3"
+                  style="background:var(--bg3)" />
               </div>
-              <div id="reminder-time-input-container" class="hidden" style="margin-top: 10px; animation: fadeSlideIn 0.2s ease;">
+              <div id="reminder-time-input-container" class="hidden"
+                style="margin-top: 10px; animation: fadeSlideIn 0.2s ease;">
                 <label class="form-label">Reminder Time</label>
                 <div class="form-row" style="gap:8px; margin-bottom:0">
                   <select class="form-input" id="reminder-time-hour" style="background:var(--bg3); flex: 1.5;">
@@ -1859,7 +1874,9 @@
                   </select>
                 </div>
               </div>
-              <button type="button" class="btn-ghost" style="margin-top: 12px; width: 100%; justify-content: center; background: rgba(99, 102, 241, 0.15); border: 1px solid var(--indigo); padding: 8px; border-radius: var(--radius-xs); font-size: 13px; font-weight:600;" onclick="addReminderToList()">＋ Add Reminder</button>
+              <button type="button" class="btn-ghost"
+                style="margin-top: 12px; width: 100%; justify-content: center; background: rgba(99, 102, 241, 0.15); border: 1px solid var(--indigo); padding: 8px; border-radius: var(--radius-xs); font-size: 13px; font-weight:600;"
+                onclick="addReminderToList()">＋ Add Reminder</button>
             </div>
           </div>
         </div>
@@ -2000,6 +2017,7 @@
     // ============================================================
     let state = { debts: [], dues: [], sections: [] };
     let currentSort = 'snowball';
+    let currentDueFilter = 'all';
     let editingDebtId = null;
     let editingDueId = null;
     let activeTab = 'dashboard';
@@ -2226,9 +2244,9 @@
 
       // Total & progress
       document.getElementById('dash-total').innerHTML = `<span>₱</span>${totalDebt.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      const ORIGINAL_TOTAL = 99275.37; // sum of all defaults
-      const paid = Math.max(0, ORIGINAL_TOTAL - totalDebt);
-      const pct = Math.min(100, Math.round((paid / ORIGINAL_TOTAL) * 100));
+      const originalTotal = debts.reduce((s, d) => s + Math.max(d.goal || d.total, d.total), 0);
+      const paid = Math.max(0, originalTotal - totalDebt);
+      const pct = originalTotal > 0 ? Math.min(100, Math.round((paid / originalTotal) * 100)) : 0;
       document.getElementById('dash-progress-fill').style.width = pct + '%';
       document.getElementById('dash-progress-label-left').textContent = fmt(paid) + ' paid off';
       document.getElementById('dash-progress-label-right').textContent = pct + '%';
@@ -2239,7 +2257,7 @@
       const upcoming = allDueForStats.filter(d => !d.paid && daysUntil(d.date) >= 0 && daysUntil(d.date) <= 7).length;
       document.getElementById('dash-stats').innerHTML = `
     <div class="dash-stat-card">
-      <div class="stat-val">${debts.length}</div>
+      <div class="stat-val">${debts.filter(d => d.total > 0).length}</div>
       <div class="stat-lbl">Active Debts</div>
     </div>
     <div class="dash-stat-card">
@@ -2261,11 +2279,17 @@
       </div>
     </div>`;
       } else if (soonItems.length > 0) {
+        const hasToday = soonItems.some(d => daysUntil(d.date) === 0);
+        const titleText = hasToday ? "Due TODAY! ⏰" : "Due soon! 🔔";
         alertArea.innerHTML = `<div class="alert-card warning">
       <div class="alert-icon">🔔</div>
       <div class="alert-text">
-        <div class="alert-title">Due in the next 3 days!</div>
-        <div>${soonItems.map(d => d.name + (d.amount ? ' ' + fmt(d.amount) : '')).join(', ')}</div>
+        <div class="alert-title">${titleText}</div>
+        <div>${soonItems.map(d => {
+          const days = daysUntil(d.date);
+          const relativeText = days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`;
+          return `${d.name}${d.amount ? ' (' + fmt(d.amount) + ')' : ''} is due ${relativeText}`;
+        }).join(', ')}.</div>
       </div>
     </div>`;
       } else {
@@ -2279,7 +2303,7 @@
       }
 
       // Snowball target (smallest debt)
-      const sorted = [...debts].sort((a, b) => a.total - b.total);
+      const sorted = debts.filter(d => d.total > 0).sort((a, b) => a.total - b.total);
       const target = sorted[0];
       const snowballEl = document.getElementById('dash-snowball');
       if (target) {
@@ -2349,20 +2373,22 @@
 
       // Envelope split
       const envEl = document.getElementById('dash-envelopes');
-      let envHtml = '';
-      envelopeSections.forEach(sec => {
-        if (sec.items.length > 0) {
-          envHtml += `<div style="font-size:11px; color:var(--text3); padding:8px 0 4px; font-weight:600; text-transform:uppercase;">${sec.title}</div>`;
-          envHtml += sec.items.map(e => `
-            <div class="budget-row"><span class="label">${e.name}</span><span class="amount">${fmt(e.amount)}/week</span></div>
-          `).join('');
-        }
-      });
+      if (envEl) {
+        let envHtml = '';
+        envelopeSections.forEach(sec => {
+          if (sec.items.length > 0) {
+            envHtml += `<div style="font-size:11px; color:var(--text3); padding:8px 0 4px; font-weight:600; text-transform:uppercase;">${sec.title}</div>`;
+            envHtml += sec.items.map(e => `
+              <div class="budget-row"><span class="label">${e.name}</span><span class="amount">${fmt(e.amount)}/week</span></div>
+            `).join('');
+          }
+        });
 
-      if (envHtml) {
-        envEl.innerHTML = envHtml;
-      } else {
-        envEl.innerHTML = '<div class="empty-state" style="padding:10px 0;text-align:center;font-size:13px;color:var(--text3)">No envelope splits added.</div>';
+        if (envHtml) {
+          envEl.innerHTML = envHtml;
+        } else {
+          envEl.innerHTML = '<div class="empty-state" style="padding:10px 0;text-align:center;font-size:13px;color:var(--text3)">No envelope splits added.</div>';
+        }
       }
     }
 
@@ -2371,14 +2397,22 @@
     // ============================================================
     function setSort(s) {
       currentSort = s;
-      document.querySelectorAll('.sort-chip').forEach(c => {
+      document.querySelectorAll('#sort-bar .sort-chip').forEach(c => {
         c.classList.toggle('active', c.dataset.sort === s);
       });
       renderDebts();
     }
 
+    function setDueFilter(f) {
+      currentDueFilter = f;
+      document.querySelectorAll('#due-filter-bar .sort-chip').forEach(c => {
+        c.classList.toggle('active', c.dataset.filter === f);
+      });
+      renderDue();
+    }
+
     function getSortedDebts() {
-      const debts = [...state.debts];
+      const debts = [...state.debts].filter(d => d.total > 0);
       if (currentSort === 'snowball') return debts.sort((a, b) => a.total - b.total);
       if (currentSort === 'largest') return debts.sort((a, b) => b.total - a.total);
       if (currentSort === 'name') return debts.sort((a, b) => a.name.localeCompare(b.name));
@@ -2446,22 +2480,11 @@
             <div style="font-size:11px;color:var(--text3);margin-top:2px">total remaining</div>
           </div>
         </div>
-        <div style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:5px">
-            <span>Envelope: ${fmt(d.saved)} / ${d.goal ? fmt(d.goal) : '—'}</span>
-            <span>${d.goal > 0 ? pct + '%' : ''}</span>
-          </div>
-          <div class="progress-track">
-            <div class="progress-fill ${progressClass}" style="width:${pct}%"></div>
-          </div>
-        </div>
+
         <div class="debt-meta">
           <div class="debt-meta-item">
             <div class="meta-label">Monthly Payment</div>
             <div class="meta-val">${fmt(d.min)}</div>
-          </div>
-          <div class="debt-meta-item">
-            <div class="meta-val">${d.goal ? fmt(d.goal) : '—'}</div>
           </div>
         </div>
         ${schedHtml}
@@ -2476,13 +2499,34 @@
     function renderDue() {
       // Merge standalone dues + installments from debt schedules
       const installments = computeInstallments();
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+
       const dues = [
         ...state.dues.map(d => ({ ...d, isInstallment: false })),
         ...installments
-      ].sort((a, b) => a.date.localeCompare(b.date));
+      ].filter(d => {
+        if (d.paid) return false;
+        if (d.isInstallment) {
+          const debt = state.debts.find(debt => debt.id === d.debtId);
+          if (debt && debt.total <= 0) return false;
+        }
+        return true;
+      }).filter(d => {
+        if (currentDueFilter === 'month') {
+          const itemDate = parseDate(d.date);
+          return (itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear) || daysUntil(d.date) < 0;
+        }
+        if (currentDueFilter === '30days') {
+          const days = daysUntil(d.date);
+          return days <= 30;
+        }
+        return true;
+      }).sort((a, b) => a.date.localeCompare(b.date));
 
-      const unpaid = dues.filter(d => !d.paid).length;
-      const totalDue = dues.filter(d => !d.paid && d.amount).reduce((s, d) => s + d.amount, 0);
+      const unpaid = dues.length;
+      const totalDue = dues.filter(d => d.amount).reduce((s, d) => s + d.amount, 0);
       document.getElementById('due-subtitle').textContent =
         `${unpaid} pending • ${fmt(totalDue)} total`;
 
@@ -2524,16 +2568,12 @@
 
           const reminderIcon = d.reminderEnabled ? ' 🔔' : '';
 
-          const clickAction = d.isInstallment
-            ? `openDebtModal('${d.debtId}')`
-            : `openDueModal('${d.id}')`;
-
           const checkAction = d.isInstallment
             ? `toggleInstallmentPaid(event,'${d.debtId}',${d.installmentIndex})`
             : `togglePaid(event,'${d.id}')`;
 
           return `
-        <div class="due-item ${d.paid ? 'paid' : ''}" onclick="${clickAction}">
+        <div class="due-item ${d.paid ? 'paid' : ''}">
           <div class="due-date-badge ${badgeClass}">
             <div class="day" style="${dayStyle}">${dt.getDate()}</div>
             <div class="month">${MONTHS[dt.getMonth()]}</div>
@@ -2545,7 +2585,7 @@
           </div>
           <div class="due-item-right">
             ${urgencyBadge}
-            <button class="check-btn ${d.paid ? 'checked' : ''}" onclick="${checkAction}">${d.paid ? '✓' : ''}</button>
+            <button class="check-btn" onclick="${checkAction}">Mark as Paid</button>
           </div>
         </div>
       `;
@@ -2599,6 +2639,118 @@
     }
 
     // ============================================================
+    // RENDER HISTORY
+    // ============================================================
+    function renderHistory() {
+      const completedDebts = state.debts.filter(d => d.total <= 0);
+      const debtsContainer = document.getElementById('history-debts-list');
+      if (!debtsContainer) return;
+
+      if (completedDebts.length === 0) {
+        debtsContainer.innerHTML = `
+          <div class="empty-state" style="padding: 20px 0;">
+            <div class="empty-icon">🏆</div>
+            <p>No completed debts yet. Keep paying them off!</p>
+          </div>
+        `;
+      } else {
+        debtsContainer.innerHTML = completedDebts.map((d, i) => {
+          const statusBadge = `<span class="badge badge-emerald">🎉 Fully Paid</span>`;
+          return `
+            <div class="debt-card" onclick="openDebtModal('${d.id}')" style="opacity: 0.85; animation-delay:${i * 0.05}s">
+              <div class="debt-card-top" style="margin-bottom:0">
+                <div>
+                  <div class="debt-name" style="text-decoration: line-through; color: var(--text3);">${d.name}</div>
+                  <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">${statusBadge}</div>
+                </div>
+                <div style="text-align:right">
+                  <div class="debt-amount" style="color: var(--emerald);">${fmtShort(d.goal || d.saved)}</div>
+                  <div style="font-size:11px;color:var(--text3);margin-top:2px">original balance</div>
+                </div>
+              </div>
+              <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+                <button class="btn-ghost" style="padding: 4px 8px; font-size: 11px; color: var(--indigo-light); background: var(--surface2); border-radius: var(--radius-xs);" onclick="event.stopPropagation(); reactivateDebt('${d.id}')">↩️ Reactivate</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      const paidDues = state.dues.filter(d => d.paid).map(d => ({ ...d, isInstallment: false }));
+      const paidInstallments = computeInstallments().filter(d => d.paid);
+      const allPaid = [...paidDues, ...paidInstallments].sort((a, b) => b.date.localeCompare(a.date));
+      const duesContainer = document.getElementById('history-dues-list');
+      if (!duesContainer) return;
+
+      // Update Subtitle Counts
+      const subEl = document.getElementById('history-subtitle');
+      if (subEl) {
+        subEl.textContent = `${completedDebts.length} completed debt${completedDebts.length !== 1 ? 's' : ''} • ${allPaid.length} paid payment${allPaid.length !== 1 ? 's' : ''}`;
+      }
+
+      if (allPaid.length === 0) {
+        duesContainer.innerHTML = `
+          <div class="empty-state" style="padding: 20px 0;">
+            <div class="empty-icon">✅</div>
+            <p>No paid payments yet.</p>
+          </div>
+        `;
+      } else {
+        duesContainer.innerHTML = allPaid.map(d => {
+          const dt = parseDate(d.date);
+          const badgeClass = 'paid-bg'; 
+          const dayStyle = 'color:var(--emerald)';
+          const urgencyBadge = `<span class="badge badge-emerald">Paid ✓</span>`;
+          const installmentBadge = d.isInstallment
+            ? `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.installmentIndex + 1} of ${d.installmentTotal}</span></div>`
+            : '';
+          const reminderIcon = d.reminderEnabled ? ' 🔔' : '';
+          const checkAction = d.isInstallment
+            ? `toggleInstallmentPaid(event,'${d.debtId}',${d.installmentIndex})`
+            : `togglePaid(event,'${d.id}')`;
+
+          return `
+            <div class="due-item paid">
+              <div class="due-date-badge ${badgeClass}">
+                <div class="day" style="${dayStyle}">${dt.getDate()}</div>
+                <div class="month">${MONTHS[dt.getMonth()]}</div>
+              </div>
+              <div class="due-item-info">
+                <div class="due-item-name" style="text-decoration: line-through; color: var(--text3);">${d.name}${reminderIcon}</div>
+                <div class="due-item-amount" style="color: var(--text3);">${d.amount ? fmt(d.amount) : 'Amount TBD'}</div>
+                ${installmentBadge}
+              </div>
+              <div class="due-item-right">
+                ${urgencyBadge}
+                <button class="check-btn checked" onclick="${checkAction}">Mark as Unpaid</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    function reactivateDebt(id) {
+      const debt = state.debts.find(d => d.id === id);
+      if (!debt) return;
+      
+      // Restore total to original goal, or monthly payment, or default to 1000
+      debt.total = debt.goal > 0 ? debt.goal : (debt.min > 0 ? debt.min : 1000);
+      
+      // Clear paid installments if schedule is enabled
+      if (debt.schedule) {
+        debt.schedule.paidInstallments = [];
+      }
+      
+      showToast(`↩️ "${debt.name}" reactivated!`);
+      renderAll();
+      saveState();
+      
+      // Open the edit modal to allow tweaking the restored total balance
+      openDebtModal(id);
+    }
+
+    // ============================================================
     // RENDER ALL
     // ============================================================
     function renderAll() {
@@ -2606,6 +2758,7 @@
       renderDebts();
       renderDue();
       renderPlanner();
+      renderHistory();
     }
 
     // ============================================================
@@ -2614,7 +2767,27 @@
     function getSelectedStartMonthYear() {
       const mSel = document.getElementById('schedule-start-month-m');
       const ySel = document.getElementById('schedule-start-month-y');
-      if (!mSel || !ySel) return null;
+      if (!mSel || !ySel) {
+        if (editingDebtId) {
+          const debt = state.debts.find(d => d.id === editingDebtId);
+          if (debt?.schedule?.startYear !== undefined && debt?.schedule?.startMonth !== undefined) {
+            return { m: debt.schedule.startMonth, y: debt.schedule.startYear };
+          }
+        }
+        const now = new Date();
+        let m = now.getMonth();
+        let y = now.getFullYear();
+        const dayInput = document.getElementById('schedule-day');
+        const dueDay = dayInput ? (parseInt(dayInput.value) || 15) : 15;
+        if (now.getDate() > dueDay) {
+          m += 1;
+          if (m > 11) {
+            m = 0;
+            y += 1;
+          }
+        }
+        return { m, y };
+      }
       return {
         m: parseInt(mSel.value) || 0,
         y: parseInt(ySel.value) || new Date().getFullYear()
@@ -2696,7 +2869,7 @@
       }
       container.innerHTML = modalReminders.map((rem, idx) => {
         const typeText = rem.daysBefore === 0 ? 'On due date' : `${rem.daysBefore} day${rem.daysBefore > 1 ? 's' : ''} before`;
-        
+
         // format time for display (e.g. "09:00" -> "9:00 AM")
         const [h24, m] = rem.time.split(':');
         const hour24 = parseInt(h24) || 0;
@@ -2723,7 +2896,7 @@
       if (!isDue) {
         daysBefore = parseInt(document.getElementById('reminder-days-input').value) || 1;
       }
-      
+
       const hourVal = parseInt(document.getElementById('reminder-time-hour').value) || 9;
       const periodVal = document.getElementById('reminder-time-period').value || 'AM';
       let hour24 = hourVal;
@@ -3028,9 +3201,13 @@
         document.getElementById('schedule-enabled').checked = true;
         document.getElementById('schedule-fields').classList.remove('hidden');
         document.getElementById('schedule-day').value = 15;
-        document.getElementById('schedule-months').value = 6;
-        document.getElementById('schedule-summary').textContent = '';
-        document.getElementById('schedule-summary').classList.add('hidden');
+        const monthsInput = document.getElementById('schedule-months');
+        if (monthsInput) monthsInput.value = 6;
+        const summaryEl = document.getElementById('schedule-summary');
+        if (summaryEl) {
+          summaryEl.textContent = '';
+          summaryEl.classList.add('hidden');
+        }
 
         // Reset split start month and year
         const startM = document.getElementById('schedule-start-month-m');
@@ -3073,11 +3250,11 @@
       const total = parseFloat(document.getElementById('debt-total').value) || 0;
       const min = parseFloat(document.getElementById('debt-min').value) || 0;
       const saved = parseFloat(document.getElementById('debt-saved').value) || 0;
-      let goal = 0;
+      let goal = total;
       let status = '';
       if (editingDebtId) {
         const existing = state.debts.find(d => d.id === editingDebtId);
-        goal = existing?.goal || 0;
+        goal = existing?.goal || total;
         status = existing?.status || '';
       }
 
@@ -3088,11 +3265,22 @@
       let schedule = null;
       if (schedEnabled) {
         const dueDay = parseInt(document.getElementById('schedule-day').value) || 15;
-        const numMonths = parseInt(document.getElementById('schedule-months').value) || 1;
         const start = getSelectedStartMonthYear();
         const startYear = start ? start.y : new Date().getFullYear();
         const startMonth = start ? start.m : new Date().getMonth();
-        const monthlyAmount = (total > 0 && numMonths > 0) ? Math.round((total / numMonths) * 100) / 100 : 0;
+        
+        const monthsInput = document.getElementById('schedule-months');
+        let numMonths = 1;
+        if (monthsInput) {
+          numMonths = parseInt(monthsInput.value) || 1;
+        } else {
+          const end = getSelectedEndMonthYear();
+          if (start && end) {
+            numMonths = (end.y * 12 + end.m) - (start.y * 12 + start.m) + 1;
+            if (numMonths < 1) numMonths = 1;
+          }
+        }
+        const monthlyAmount = min > 0 ? min : ((total > 0 && numMonths > 0) ? Math.round((total / numMonths) * 100) / 100 : 0);
         const reminderEnabled = document.getElementById('reminder-enabled').checked;
         let reminders = reminderEnabled ? [...modalReminders] : [];
         if (reminderEnabled && reminders.length === 0) {
@@ -3223,10 +3411,28 @@
       event.stopPropagation();
       const idx = state.dues.findIndex(d => d.id === id);
       if (idx > -1) {
-        state.dues[idx].paid = !state.dues[idx].paid;
-        renderAll();
-        showToast(state.dues[idx].paid ? '✅ Marked as paid!' : '↩️ Marked as unpaid');
-        await saveState();
+        const isMarkingPaid = !state.dues[idx].paid;
+        if (isMarkingPaid) {
+          const btn = event.currentTarget || event.target;
+          if (btn) {
+            btn.classList.add('checked');
+            btn.textContent = 'Paid ✓';
+            btn.style.pointerEvents = 'none';
+            const item = btn.closest('.due-item');
+            if (item) item.style.opacity = '0.5';
+          }
+          setTimeout(async () => {
+            state.dues[idx].paid = true;
+            renderAll();
+            showToast('✅ Marked as paid!');
+            await saveState();
+          }, 350);
+        } else {
+          state.dues[idx].paid = false;
+          renderAll();
+          showToast('↩️ Marked as unpaid');
+          await saveState();
+        }
       }
     }
 
@@ -3234,17 +3440,38 @@
       event.stopPropagation();
       const debtIdx = state.debts.findIndex(d => d.id === debtId);
       if (debtIdx === -1 || !state.debts[debtIdx].schedule) return;
-      const paid = state.debts[debtIdx].schedule.paidInstallments || [];
+      
+      const debt = state.debts[debtIdx];
+      const monthlyAmount = debt.schedule.monthlyAmount || 0;
+      const paid = debt.schedule.paidInstallments || [];
       const idx = paid.indexOf(installmentIndex);
-      if (idx > -1) {
-        paid.splice(idx, 1);
+      
+      const isMarkingPaid = idx === -1;
+      if (isMarkingPaid) {
+        const btn = event.currentTarget || event.target;
+        if (btn) {
+          btn.classList.add('checked');
+          btn.textContent = 'Paid ✓';
+          btn.style.pointerEvents = 'none';
+          const item = btn.closest('.due-item');
+          if (item) item.style.opacity = '0.5';
+        }
+        setTimeout(async () => {
+          paid.push(installmentIndex);
+          debt.total = Math.max(0, debt.total - monthlyAmount);
+          debt.schedule.paidInstallments = paid;
+          renderAll();
+          showToast('✅ Installment paid!');
+          await saveState();
+        }, 350);
       } else {
-        paid.push(installmentIndex);
+        paid.splice(idx, 1);
+        debt.total = debt.total + monthlyAmount;
+        debt.schedule.paidInstallments = paid;
+        renderAll();
+        showToast('↩️ Marked as unpaid');
+        await saveState();
       }
-      state.debts[debtIdx].schedule.paidInstallments = paid;
-      renderAll();
-      showToast(idx > -1 ? '↩️ Marked as unpaid' : '✅ Installment paid!');
-      await saveState();
     }
 
     // ============================================================
