@@ -1986,13 +1986,13 @@
                 style="margin-top: 10px; animation: fadeSlideIn 0.2s ease;">
                 <label class="form-label">Number of Days Before</label>
                 <input class="form-input" type="number" id="reminder-days-input" min="1" max="90" placeholder="e.g. 3"
-                  style="background:var(--bg3)" />
+                  style="background:var(--bg3)" value="" />
               </div>
               <div id="reminder-time-input-container" class="hidden"
                 style="margin-top: 10px; animation: fadeSlideIn 0.2s ease;">
                 <label class="form-label">Reminder Time</label>
-                <div class="form-row" style="gap:8px; margin-bottom:0">
-                  <select class="form-input" id="reminder-time-hour" style="background:var(--bg3); flex: 1.5;">
+                <div class="form-row" style="gap:6px; margin-bottom:0">
+                  <select class="form-input" id="reminder-time-hour" style="background:var(--bg3); flex: 1.2;">
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
@@ -2005,6 +2005,20 @@
                     <option value="10">10</option>
                     <option value="11">11</option>
                     <option value="12">12</option>
+                  </select>
+                  <select class="form-input" id="reminder-time-minute" style="background:var(--bg3); flex: 1.2;">
+                    <option value="00" selected>00</option>
+                    <option value="05">05</option>
+                    <option value="10">10</option>
+                    <option value="15">15</option>
+                    <option value="20">20</option>
+                    <option value="25">25</option>
+                    <option value="30">30</option>
+                    <option value="35">35</option>
+                    <option value="40">40</option>
+                    <option value="45">45</option>
+                    <option value="50">50</option>
+                    <option value="55">55</option>
                   </select>
                   <select class="form-input" id="reminder-time-period" style="background:var(--bg3); flex: 1;">
                     <option value="AM" selected>AM</option>
@@ -3126,13 +3140,13 @@
       container.innerHTML = modalReminders.map((rem, idx) => {
         const typeText = rem.daysBefore === 0 ? 'On due date' : `${rem.daysBefore} day${rem.daysBefore > 1 ? 's' : ''} before`;
 
-        // format time for display (e.g. "09:00" -> "9:00 AM")
+        // format time for display (e.g. "09:30" -> "9:30 AM")
         const [h24, m] = rem.time.split(':');
         const hour24 = parseInt(h24) || 0;
         let hour12 = hour24 % 12;
         if (hour12 === 0) hour12 = 12;
         const period = hour24 >= 12 ? 'PM' : 'AM';
-        const formattedTime = `${hour12}:00 ${period}`;
+        const formattedTime = `${hour12}:${m} ${period}`;
 
         return `
           <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg3); padding: 8px 12px; border-radius: var(--radius-xs); font-size: 13px; border: 1px solid var(--border2);">
@@ -3150,10 +3164,20 @@
       const isDue = document.getElementById('reminder-type-due').classList.contains('active');
       let daysBefore = 0;
       if (!isDue) {
-        daysBefore = parseInt(document.getElementById('reminder-days-input').value) || 1;
+        const rawDays = document.getElementById('reminder-days-input').value;
+        if (rawDays.trim() === "") {
+          showToast('⚠️ Please enter number of days');
+          return;
+        }
+        daysBefore = parseInt(rawDays);
+        if (isNaN(daysBefore) || daysBefore < 1) {
+          showToast('⚠️ Please enter a valid number of days');
+          return;
+        }
       }
 
       const hourVal = parseInt(document.getElementById('reminder-time-hour').value) || 9;
+      const minVal = document.getElementById('reminder-time-minute').value || '00';
       const periodVal = document.getElementById('reminder-time-period').value || 'AM';
       let hour24 = hourVal;
       if (periodVal === 'PM' && hourVal !== 12) {
@@ -3161,7 +3185,7 @@
       } else if (periodVal === 'AM' && hourVal === 12) {
         hour24 = 0;
       }
-      const timeVal = `${String(hour24).padStart(2, '0')}:00`;
+      const timeVal = `${String(hour24).padStart(2, '0')}:${minVal}`;
 
       // Check duplicate
       const duplicate = modalReminders.some(r => r.daysBefore === daysBefore && r.time === timeVal);
@@ -3443,10 +3467,12 @@
 
         setReminderType('days');
         const inputEl = document.getElementById('reminder-days-input');
-        if (inputEl) inputEl.value = 1;
+        if (inputEl) inputEl.value = '';
         const hourSel = document.getElementById('reminder-time-hour');
+        const minuteSel = document.getElementById('reminder-time-minute');
         const periodSel = document.getElementById('reminder-time-period');
         if (hourSel) hourSel.value = '9';
+        if (minuteSel) minuteSel.value = '00';
         if (periodSel) periodSel.value = 'AM';
       } else {
         document.getElementById('debt-modal-title').textContent = 'Add Utang';
@@ -3499,10 +3525,12 @@
         renderModalRemindersList();
         setReminderType('days');
         const inputEl = document.getElementById('reminder-days-input');
-        if (inputEl) inputEl.value = 1;
+        if (inputEl) inputEl.value = '';
         const hourSel = document.getElementById('reminder-time-hour');
+        const minuteSel = document.getElementById('reminder-time-minute');
         const periodSel = document.getElementById('reminder-time-period');
         if (hourSel) hourSel.value = '9';
+        if (minuteSel) minuteSel.value = '00';
         if (periodSel) periodSel.value = 'AM';
       }
     }
@@ -3549,9 +3577,19 @@
           const isDue = document.getElementById('reminder-type-due').classList.contains('active');
           let daysBefore = 0;
           if (!isDue) {
-            daysBefore = parseInt(document.getElementById('reminder-days-input').value) || 1;
+            const rawDays = document.getElementById('reminder-days-input').value;
+            if (rawDays.trim() === "") {
+              showToast('⚠️ Please enter number of days');
+              return;
+            }
+            daysBefore = parseInt(rawDays);
+            if (isNaN(daysBefore) || daysBefore < 1) {
+              showToast('⚠️ Please enter a valid number of days');
+              return;
+            }
           }
           const hourVal = parseInt(document.getElementById('reminder-time-hour').value) || 9;
+          const minVal = document.getElementById('reminder-time-minute').value || '00';
           const periodVal = document.getElementById('reminder-time-period').value || 'AM';
           let hour24 = hourVal;
           if (periodVal === 'PM' && hourVal !== 12) {
@@ -3559,7 +3597,7 @@
           } else if (periodVal === 'AM' && hourVal === 12) {
             hour24 = 0;
           }
-          const timeVal = `${String(hour24).padStart(2, '0')}:00`;
+          const timeVal = `${String(hour24).padStart(2, '0')}:${minVal}`;
           reminders.push({ daysBefore, time: timeVal });
         }
 
