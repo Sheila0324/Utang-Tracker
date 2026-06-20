@@ -474,6 +474,40 @@
       animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
+    /* Day Picker Styles */
+    .day-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 10px;
+      padding: 8px 0;
+    }
+
+    .day-cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      background: var(--bg3);
+      border: 1.5px solid var(--border2);
+      transition: all 0.15s ease;
+    }
+
+    .day-cell:active {
+      transform: scale(0.9);
+    }
+
+    .day-cell.selected {
+      background: var(--indigo);
+      border-color: var(--indigo);
+      color: #fff;
+      box-shadow: var(--shadow-sm);
+    }
+
     @keyframes slideUp {
       from {
         transform: translateY(100%);
@@ -1832,8 +1866,7 @@
           <div class="schedule-section">
             <div class="form-group" style="margin-bottom:10px">
               <label class="form-label">Pay on Day</label>
-              <input class="form-input" id="schedule-day" type="number" min="1" max="28" placeholder="15"
-                oninput="calcMonthlyAmount()" />
+              <input class="form-input" id="schedule-day" type="text" readonly placeholder="Select Day" onclick="openDayPicker()" style="cursor: pointer; caret-color: transparent;" />
             </div>
             <div class="form-group" style="margin-bottom:10px">
               <label class="form-label">Ending Month</label>
@@ -1954,9 +1987,6 @@
       </div>
     </div>
 
-    <!-- ===========================
-       SECTION MODAL
-  =========================== -->
     <div class="modal-backdrop hidden" id="section-modal">
       <div class="modal-sheet">
         <div class="modal-handle"></div>
@@ -1977,14 +2007,13 @@
           <button class="btn-cancel" onclick="closeModal('section-modal')">Cancel</button>
           <button class="btn-save" onclick="saveSection()">Save</button>
         </div>
-        <button class="btn-danger hidden" id="sec-delete-btn" onclick="deleteCurrentSection()">🗑 Delete
-          Section</button>
+        <button class="btn-danger hidden" id="sec-delete-btn" onclick="deleteCurrentSection()">🗑 Delete Section</button>
       </div>
     </div>
 
     <!-- ===========================
        ITEM MODAL
-  =========================== -->
+   =========================== -->
     <div class="modal-backdrop hidden" id="item-modal">
       <div class="modal-sheet">
         <div class="modal-handle"></div>
@@ -2002,6 +2031,20 @@
           <button class="btn-save" onclick="saveItem()">Save</button>
         </div>
         <button class="btn-danger hidden" id="item-delete-btn" onclick="deleteCurrentItem()">🗑 Delete Item</button>
+      </div>
+    </div>
+
+    <!-- ===========================
+       DAY PICKER MODAL
+   =========================== -->
+    <div class="modal-backdrop hidden" id="day-picker-modal" style="z-index: 250;">
+      <div class="modal-sheet" style="max-width: 340px; padding: 8px 20px 24px; border-radius: 24px;">
+        <div class="modal-handle"></div>
+        <div class="modal-title" style="text-align: center; margin-bottom: 16px;">Select Due Day</div>
+        <div class="day-grid" id="day-grid"></div>
+        <div class="form-actions" style="margin-top: 16px;">
+          <button class="btn-cancel" onclick="closeModal('day-picker-modal')" style="width: 100%; padding: 12px;">Cancel</button>
+        </div>
       </div>
     </div>
 
@@ -2281,6 +2324,24 @@
           }, 1500);
         }
       }, 150);
+    }
+
+    function openDayPicker() {
+      const currentDay = parseInt(document.getElementById('schedule-day').value) || 15;
+      const grid = document.getElementById('day-grid');
+      let html = '';
+      for (let i = 1; i <= 31; i++) {
+        const isSelected = i === currentDay ? 'selected' : '';
+        html += `<div class="day-cell ${isSelected}" onclick="selectDueDay(${i})">${i}</div>`;
+      }
+      grid.innerHTML = html;
+      document.getElementById('day-picker-modal').classList.remove('hidden');
+    }
+
+    function selectDueDay(day) {
+      document.getElementById('schedule-day').value = day;
+      closeModal('day-picker-modal');
+      calcMonthlyAmount();
     }
 
     function openAddModal() {
