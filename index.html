@@ -244,6 +244,25 @@
       margin-top: 2px;
     }
 
+    /* Sticky container for header + filters */
+    .sticky-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bg);
+    }
+
+    .sticky-header .page-header {
+      position: static;
+      padding-top: 56px;
+      padding-bottom: 8px;
+      background: none;
+    }
+
+    .sticky-header .sort-bar {
+      padding-bottom: 12px;
+    }
+
     /* ===========================
        CARDS
     =========================== */
@@ -1658,15 +1677,17 @@
        DEBTS TAB
   =========================== -->
     <div id="tab-debts" class="tab-panel">
-      <div class="page-header">
-        <h1>💳 My Debts</h1>
-        <p id="debts-subtitle">Loading...</p>
-      </div>
-      <div class="sort-bar" id="sort-bar">
-        <button class="sort-chip active" data-sort="snowball" onclick="setSort('snowball')">❄️ Snowball</button>
-        <button class="sort-chip" data-sort="largest" onclick="setSort('largest')">📉 Largest</button>
-        <button class="sort-chip" data-sort="name" onclick="setSort('name')">🔤 Name</button>
-        <button class="sort-chip" data-sort="progress" onclick="setSort('progress')">📊 Progress</button>
+      <div class="sticky-header">
+        <div class="page-header">
+          <h1>💳 My Debts</h1>
+          <p id="debts-subtitle">Loading...</p>
+        </div>
+        <div class="sort-bar" id="sort-bar">
+          <button class="sort-chip active" data-sort="snowball" onclick="setSort('snowball')">❄️ Snowball</button>
+          <button class="sort-chip" data-sort="largest" onclick="setSort('largest')">📉 Largest</button>
+          <button class="sort-chip" data-sort="name" onclick="setSort('name')">🔤 Name</button>
+          <button class="sort-chip" data-sort="progress" onclick="setSort('progress')">📊 Progress</button>
+        </div>
       </div>
       <div id="debts-list"></div>
       <div style="height: 8px;"></div>
@@ -1676,14 +1697,16 @@
        DUE DATES TAB
    =========================== -->
     <div id="tab-due" class="tab-panel">
-      <div class="page-header">
-        <h1>📅 Due Dates</h1>
-        <p id="due-subtitle">Loading...</p>
-      </div>
-      <div class="sort-bar" id="due-filter-bar" style="margin-bottom: 12px;">
-        <button class="sort-chip active" data-filter="all" onclick="setDueFilter('all')">🌐 All</button>
-        <button class="sort-chip" data-filter="month" onclick="setDueFilter('month')">📅 This Month</button>
-        <button class="sort-chip" data-filter="30days" onclick="setDueFilter('30days')">⏳ Next 30 Days</button>
+      <div class="sticky-header">
+        <div class="page-header">
+          <h1>📅 Due Dates</h1>
+          <p id="due-subtitle">Loading...</p>
+        </div>
+        <div class="sort-bar" id="due-filter-bar" style="margin-bottom: 12px;">
+          <button class="sort-chip active" data-filter="all" onclick="setDueFilter('all')">🌐 All</button>
+          <button class="sort-chip" data-filter="month" onclick="setDueFilter('month')">📅 This Month</button>
+          <button class="sort-chip" data-filter="30days" onclick="setDueFilter('30days')">⏳ Next 30 Days</button>
+        </div>
       </div>
       <div class="notif-banner hidden" id="notif-banner">
         <span style="font-size:20px">🔔</span>
