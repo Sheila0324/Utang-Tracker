@@ -711,6 +711,15 @@
       border: 1px solid;
     }
 
+    .alert-link {
+      text-decoration: underline;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    .alert-link:hover {
+      opacity: 0.8;
+    }
+
     .alert-card.danger {
       background: var(--red-bg);
       border-color: rgba(239, 68, 68, 0.25);
@@ -2255,6 +2264,25 @@
       renderAll();
     }
 
+    function scrollToDueItem(itemId) {
+      switchTab('due');
+      setTimeout(() => {
+        const el = document.getElementById(`due-item-${itemId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.style.transition = 'all 0.3s ease';
+          el.style.boxShadow = '0 0 20px rgba(99, 102, 241, 0.6)';
+          el.style.borderColor = 'var(--indigo)';
+          el.style.transform = 'scale(1.02)';
+          setTimeout(() => {
+            el.style.boxShadow = '';
+            el.style.borderColor = '';
+            el.style.transform = '';
+          }, 1500);
+        }
+      }, 150);
+    }
+
     function openAddModal() {
       if (activeTab === 'debts') openDebtModal(null);
       else if (activeTab === 'due') openDueModal(null);
@@ -2302,7 +2330,7 @@
       <div class="alert-icon">⚠️</div>
       <div class="alert-text">
         <div class="alert-title">${overdueItems.length} Overdue Payment${overdueItems.length > 1 ? 's' : ''}!</div>
-        <div>${overdueItems.map(d => d.name).join(', ')} ${overdueItems.length === 1 ? 'is' : 'are'} past due.</div>
+        <div>${overdueItems.map(d => `<span class="alert-link" onclick="scrollToDueItem('${d.id}')">${d.name}</span>`).join(', ')} ${overdueItems.length === 1 ? 'is' : 'are'} past due.</div>
       </div>
     </div>`;
       } else if (soonItems.length > 0) {
@@ -2315,7 +2343,7 @@
         <div>${soonItems.map(d => {
           const days = daysUntil(d.date);
           const relativeText = days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`;
-          return `${d.name}${d.amount ? ' (' + fmt(d.amount) + ')' : ''} is due ${relativeText}`;
+          return `<span class="alert-link" onclick="scrollToDueItem('${d.id}')">${d.name}</span>${d.amount ? ' (' + fmt(d.amount) + ')' : ''} is due ${relativeText}`;
         }).join(', ')}.</div>
       </div>
     </div>`;
@@ -2359,7 +2387,7 @@
         const urgency = days < 0 ? 'danger' : days <= 3 ? 'warning' : 'info';
         const daysText = days < 0 ? `${Math.abs(days)} day${Math.abs(days) > 1 ? 's' : ''} overdue` : days === 0 ? 'Due TODAY!' : `in ${days} day${days > 1 ? 's' : ''}`;
         nextDueEl.innerHTML = `
-      <div class="alert-card ${urgency}" style="cursor:pointer" onclick="switchTab('due')">
+      <div class="alert-card ${urgency}" style="cursor:pointer" onclick="scrollToDueItem('${nextDue.id}')">
         <div class="alert-icon">${days < 0 ? '🚨' : days <= 3 ? '⏰' : '📆'}</div>
         <div class="alert-text" style="flex:1">
           <div class="alert-title">${nextDue.name}</div>
@@ -2600,7 +2628,7 @@
             : `togglePaid(event,'${d.id}')`;
 
           return `
-        <div class="due-item ${d.paid ? 'paid' : ''}">
+        <div class="due-item ${d.paid ? 'paid' : ''}" id="due-item-${d.id}">
           <div class="due-date-badge ${badgeClass}">
             <div class="day" style="${dayStyle}">${dt.getDate()}</div>
             <div class="month">${MONTHS[dt.getMonth()]}</div>
