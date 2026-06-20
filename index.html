@@ -508,6 +508,75 @@
       box-shadow: var(--shadow-sm);
     }
 
+    /* Month & Year Picker Styles */
+    .month-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      padding: 8px 0;
+    }
+
+    .month-cell {
+      padding: 12px 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      background: var(--bg3);
+      border: 1.5px solid var(--border2);
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+
+    .month-cell:active {
+      transform: scale(0.95);
+    }
+
+    .month-cell.selected {
+      background: var(--indigo);
+      border-color: var(--indigo);
+      color: #fff;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .year-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      padding: 8px 0;
+    }
+
+    .year-cell {
+      padding: 12px 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      background: var(--bg3);
+      border: 1.5px solid var(--border2);
+      transition: all 0.15s ease;
+      text-align: center;
+    }
+
+    .year-cell:active {
+      transform: scale(0.95);
+    }
+
+    .year-cell.selected {
+      background: var(--indigo);
+      border-color: var(--indigo);
+      color: #fff;
+      box-shadow: var(--shadow-sm);
+    }
+
     @keyframes slideUp {
       from {
         transform: translateY(100%);
@@ -1868,13 +1937,13 @@
               <label class="form-label">Pay on Day</label>
               <input class="form-input" id="schedule-day" type="text" readonly placeholder="Select Day" onclick="openDayPicker()" style="cursor: pointer; caret-color: transparent;" />
             </div>
-            <div class="form-group" style="margin-bottom:10px">
+             <div class="form-group" style="margin-bottom:10px">
               <label class="form-label">Ending Month</label>
               <div class="form-row" style="gap:8px; margin-bottom:0">
-                <select class="form-input" id="schedule-end-month-m" style="background:var(--bg3); flex: 2;"
-                  onchange="calcMonthlyAmount()"></select>
-                <input class="form-input" type="number" id="schedule-end-month-y"
-                  style="background:var(--bg3); flex: 1.2;" placeholder="Year" oninput="calcMonthlyAmount()" />
+                <input class="form-input" id="schedule-end-month-m" type="text" readonly placeholder="Month"
+                  onclick="openMonthPicker()" style="background:var(--bg3); flex: 2; cursor: pointer; caret-color: transparent;" data-value="" />
+                <input class="form-input" id="schedule-end-month-y" type="text" readonly placeholder="Year"
+                  onclick="openYearPicker()" style="background:var(--bg3); flex: 1.2; cursor: pointer; caret-color: transparent;" />
               </div>
             </div>
 
@@ -2044,6 +2113,34 @@
         <div class="day-grid" id="day-grid"></div>
         <div class="form-actions" style="margin-top: 16px;">
           <button class="btn-cancel" onclick="closeModal('day-picker-modal')" style="width: 100%; padding: 12px;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===========================
+       MONTH PICKER MODAL
+   =========================== -->
+    <div class="modal-backdrop hidden" id="month-picker-modal" style="z-index: 250;">
+      <div class="modal-sheet" style="max-width: 340px; padding: 8px 20px 24px; border-radius: 24px;">
+        <div class="modal-handle"></div>
+        <div class="modal-title" style="text-align: center; margin-bottom: 16px;">Select Ending Month</div>
+        <div class="month-grid" id="month-grid"></div>
+        <div class="form-actions" style="margin-top: 16px;">
+          <button class="btn-cancel" onclick="closeModal('month-picker-modal')" style="width: 100%; padding: 12px;">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===========================
+       YEAR PICKER MODAL
+   =========================== -->
+    <div class="modal-backdrop hidden" id="year-picker-modal" style="z-index: 250;">
+      <div class="modal-sheet" style="max-width: 340px; padding: 8px 20px 24px; border-radius: 24px;">
+        <div class="modal-handle"></div>
+        <div class="modal-title" style="text-align: center; margin-bottom: 16px;">Select Ending Year</div>
+        <div class="year-grid" id="year-grid"></div>
+        <div class="form-actions" style="margin-top: 16px;">
+          <button class="btn-cancel" onclick="closeModal('year-picker-modal')" style="width: 100%; padding: 12px;">Cancel</button>
         </div>
       </div>
     </div>
@@ -2341,6 +2438,49 @@
     function selectDueDay(day) {
       document.getElementById('schedule-day').value = day;
       closeModal('day-picker-modal');
+      calcMonthlyAmount();
+    }
+
+    function openMonthPicker() {
+      const endM = document.getElementById('schedule-end-month-m');
+      const currentMonth = endM.dataset.value !== "" ? parseInt(endM.dataset.value) : new Date().getMonth();
+      const grid = document.getElementById('month-grid');
+      let html = '';
+      for (let m = 0; m < 12; m++) {
+        const isSelected = m === currentMonth ? 'selected' : '';
+        html += `<div class="month-cell ${isSelected}" onclick="selectEndMonth(${m})">${MONTHS_FULL[m]}</div>`;
+      }
+      grid.innerHTML = html;
+      document.getElementById('month-picker-modal').classList.remove('hidden');
+    }
+
+    function selectEndMonth(m) {
+      const endM = document.getElementById('schedule-end-month-m');
+      endM.value = MONTHS_FULL[m];
+      endM.dataset.value = m;
+      closeModal('month-picker-modal');
+      calcMonthlyAmount();
+    }
+
+    function openYearPicker() {
+      const endY = document.getElementById('schedule-end-month-y');
+      const currentYear = parseInt(endY.value) || new Date().getFullYear();
+      const grid = document.getElementById('year-grid');
+      const startYear = new Date().getFullYear();
+      let html = '';
+      for (let i = 0; i < 10; i++) {
+        const year = startYear + i;
+        const isSelected = year === currentYear ? 'selected' : '';
+        html += `<div class="year-cell ${isSelected}" onclick="selectEndYear(${year})">${year}</div>`;
+      }
+      grid.innerHTML = html;
+      document.getElementById('year-picker-modal').classList.remove('hidden');
+    }
+
+    function selectEndYear(year) {
+      const endY = document.getElementById('schedule-end-month-y');
+      endY.value = year;
+      closeModal('year-picker-modal');
       calcMonthlyAmount();
     }
 
@@ -2915,7 +3055,7 @@
       const ySel = document.getElementById('schedule-end-month-y');
       if (!mSel || !ySel) return null;
       return {
-        m: parseInt(mSel.value) || 0,
+        m: parseInt(mSel.dataset.value) || 0,
         y: parseInt(ySel.value) || new Date().getFullYear()
       };
     }
@@ -3043,7 +3183,7 @@
 
     function populateEndMonths() {
       const endM = document.getElementById('schedule-end-month-m');
-      if (!endM) return;
+      if (!endM || endM.tagName !== 'SELECT') return;
 
       const currentM = endM.value;
       endM.innerHTML = '';
@@ -3276,7 +3416,10 @@
 
           const endM = document.getElementById('schedule-end-month-m');
           const endY = document.getElementById('schedule-end-month-y');
-          if (endM) endM.value = endMVal;
+          if (endM) {
+            endM.value = MONTHS_FULL[endMVal];
+            endM.dataset.value = endMVal;
+          }
           if (endY) endY.value = endYVal;
 
           calcMonthlyAmount();
@@ -3341,7 +3484,10 @@
 
         const endM = document.getElementById('schedule-end-month-m');
         const endY = document.getElementById('schedule-end-month-y');
-        if (endM) endM.value = endMVal;
+        if (endM) {
+          endM.value = MONTHS_FULL[endMVal];
+          endM.dataset.value = endMVal;
+        }
         if (endY) endY.value = endYVal;
 
         calcMonthlyAmount();
