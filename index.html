@@ -18,6 +18,10 @@
     rel="stylesheet" />
   <!-- Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Firebase SDKs (for FCM Push Notifications) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
   <style>
     /* ===========================
        DESIGN SYSTEM & TOKENS
@@ -3688,10 +3692,148 @@
       });
     }, 100);
 
-    // Register service worker (PWA)
-    if ('serviceWorker' in navigator) {
-      // SW is optional; basic caching for offline use
+    // ============================================================
+    // FIREBASE CONFIG
+    // ── STEP 1: Paste your Firebase config values here ─────────
+    // Get from: Firebase Console → Project Settings → Your apps
+    // → Web app → Firebase SDK snippet → Config
+    // ────────────────────────────────────────────────────────────
+    const FIREBASE_CONFIG = {
+      apiKey:            "AIzaSyD0O3ThM2Indy9DpyEvK88-mR_V7IGzUdM",
+      authDomain:        "utang-tracker-ae2cd.firebaseapp.com",
+      projectId:         "utang-tracker-ae2cd",
+      storageBucket:     "utang-tracker-ae2cd.firebasestorage.app",
+      messagingSenderId: "939567910786",
+      appId:             "1:939567910786:web:44d79785b0358753fc499b",
+    };
+
+    // ── STEP 2: Paste your VAPID public key here ─────────────
+    // Get from: Firebase Console → Project Settings
+    // → Cloud Messaging → Web Push certificates → Key pair
+    const VAPID_KEY = "BCArp-sEbse4e7I1I8wM_OvGdTbitcVzQE-wIIc4mLhfnt895rixbAn9GmoFOTL26nSVLAR7kiv8YJo-1AmUeTc";
+    // ────────────────────────────────────────────────────────────
+
+    // ============================================================
+    // SERVICE WORKER + FCM SETUP
+    // ============================================================
+    let fcmMessaging = null;
+
+    async function initFirebaseAndSW() {
+      // Only init if Firebase config is filled in
+      if (FIREBASE_CONFIG.apiKey === 'PASTE_YOUR_API_KEY_HERE') {
+        console.log('[FCM] Firebase not configured yet — skipping push setup.');
+        // Still register SW for offline support
+        if ('serviceWorker' in navigator) {
+          try {
+            await navigator.serviceWorker.register('./sw.js');
+            console.log('[SW] Registered (offline mode only)');
+          } catch (e) {
+            console.warn('[SW] Registration failed:', e);
+          }
+        }
+        return;
+      }
+
+      try {
+        // Init Firebase app
+        if (!firebase.apps.length) {
+          firebase.initializeApp(FIREBASE_CONFIG);
+        }
+        fcmMessaging = firebase.messaging();
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+          const swReg = await navigator.serviceWorker.register('./sw.js');
+          console.log('[SW] Registered successfully:', swReg.scope);
+
+          // Request notification permission and get FCM token
+          await subscribeToFCM(swReg);
+
+          // Register periodic background sync if supported
+          if ('periodicSync' in swReg) {
+            try {
+              await swReg.periodicSync.register('check-reminders', { minInterval: 60 * 60 * 1000 }); // every hour
+              console.log('[SW] Periodic sync registered');
+            } catch (e) {
+              console.log('[SW] Periodic sync not supported:', e);
+            }
+          }
+        }
+
+        // Handle foreground messages (app is open)
+        fcmMessaging.onMessage((payload) => {
+          console.log('[FCM] Foreground message:', payload);
+          const body = payload.notification?.body || 'Upcoming payment reminder';
+          showToast('🔔 ' + body);
+        });
+
+        // Listen for SW messages
+        navigator.serviceWorker.addEventListener('message', (event) => {
+          if (event.data?.type === 'CHECK_REMINDERS') {
+            checkReminders();
+          }
+        });
+
+      } catch (err) {
+        console.error('[FCM] Init error:', err);
+      }
     }
+
+    async function subscribeToFCM(swReg) {
+      if (!('Notification' in window)) return;
+
+      // Request permission
+      let permission = Notification.permission;
+      if (permission === 'default') {
+        permission = await Notification.requestPermission();
+      }
+
+      if (permission !== 'granted') {
+        console.log('[FCM] Notification permission not granted:', permission);
+        checkAndShowNotifBanner();
+        return;
+      }
+
+      // Hide the banner since permission is granted
+      document.getElementById('notif-banner')?.classList.add('hidden');
+
+      try {
+        // Get FCM token
+        const token = await fcmMessaging.getToken({
+          vapidKey:        VAPID_KEY,
+          serviceWorkerRegistration: swReg,
+        });
+
+        if (!token) {
+          console.warn('[FCM] No token received');
+          return;
+        }
+
+        console.log('[FCM] Token received:', token.slice(0, 20) + '...');
+
+        // Save token to Supabase (upsert so we don't duplicate)
+        if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+          const { error } = await sb
+            .from('push_tokens')
+            .upsert({ token }, { onConflict: 'token' });
+
+          if (error) {
+            console.error('[FCM] Failed to save token to Supabase:', error);
+          } else {
+            console.log('[FCM] Token saved to Supabase ✓');
+          }
+        }
+
+        // Also store locally for reference
+        localStorage.setItem('fcm-token', token);
+
+      } catch (err) {
+        console.error('[FCM] getToken error:', err);
+      }
+    }
+
+    // Run Firebase/SW init after state loads
+    initFirebaseAndSW();
   </script>
 </body>
 

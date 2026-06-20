@@ -22,5 +22,7 @@
     }
   ],
   "categories": ["finance", "utilities"],
-  "lang": "en-PH"
+  "lang": "en-PH",
+
+  "gcm_sender_id": "939567910786"
 }
