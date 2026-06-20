@@ -1991,8 +1991,8 @@
               <div id="reminder-time-input-container" class="hidden"
                 style="margin-top: 10px; animation: fadeSlideIn 0.2s ease;">
                 <label class="form-label">Reminder Time</label>
-                <div class="form-row" style="gap:6px; margin-bottom:0">
-                  <select class="form-input" id="reminder-time-hour" style="background:var(--bg3); flex: 1.2;">
+                <div class="form-row" style="grid-template-columns: 1.2fr 1.2fr 1fr; gap:6px; margin-bottom:0">
+                  <select class="form-input" id="reminder-time-hour" style="background:var(--bg3);">
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
@@ -2006,21 +2006,9 @@
                     <option value="11">11</option>
                     <option value="12">12</option>
                   </select>
-                  <select class="form-input" id="reminder-time-minute" style="background:var(--bg3); flex: 1.2;">
-                    <option value="00" selected>00</option>
-                    <option value="05">05</option>
-                    <option value="10">10</option>
-                    <option value="15">15</option>
-                    <option value="20">20</option>
-                    <option value="25">25</option>
-                    <option value="30">30</option>
-                    <option value="35">35</option>
-                    <option value="40">40</option>
-                    <option value="45">45</option>
-                    <option value="50">50</option>
-                    <option value="55">55</option>
-                  </select>
-                  <select class="form-input" id="reminder-time-period" style="background:var(--bg3); flex: 1;">
+                  <input class="form-input" type="number" id="reminder-time-minute" min="0" max="60" placeholder="Min"
+                    style="background:var(--bg3);" value="00" />
+                  <select class="form-input" id="reminder-time-period" style="background:var(--bg3);">
                     <option value="AM" selected>AM</option>
                     <option value="PM">PM</option>
                   </select>
@@ -3177,7 +3165,13 @@
       }
 
       const hourVal = parseInt(document.getElementById('reminder-time-hour').value) || 9;
-      const minVal = document.getElementById('reminder-time-minute').value || '00';
+      let rawMin = parseInt(document.getElementById('reminder-time-minute').value) || 0;
+      if (rawMin === 60) rawMin = 0;
+      if (rawMin < 0 || rawMin > 59) {
+        showToast('⚠️ Please enter minutes between 0 and 59');
+        return;
+      }
+      const minVal = String(rawMin).padStart(2, '0');
       const periodVal = document.getElementById('reminder-time-period').value || 'AM';
       let hour24 = hourVal;
       if (periodVal === 'PM' && hourVal !== 12) {
@@ -3589,7 +3583,13 @@
             }
           }
           const hourVal = parseInt(document.getElementById('reminder-time-hour').value) || 9;
-          const minVal = document.getElementById('reminder-time-minute').value || '00';
+          let rawMin = parseInt(document.getElementById('reminder-time-minute').value) || 0;
+          if (rawMin === 60) rawMin = 0;
+          if (rawMin < 0 || rawMin > 59) {
+            showToast('⚠️ Please enter minutes between 0 and 59');
+            return;
+          }
+          const minVal = String(rawMin).padStart(2, '0');
           const periodVal = document.getElementById('reminder-time-period').value || 'AM';
           let hour24 = hourVal;
           if (periodVal === 'PM' && hourVal !== 12) {
