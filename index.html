@@ -3978,6 +3978,14 @@
       checkAndShowNotifBanner();
       // Periodically check reminders for time-sensitive notifications
       setInterval(checkReminders, 60000);
+
+      // Auto-select text on focus for minutes input
+      const minuteInput = document.getElementById('reminder-time-minute');
+      if (minuteInput) {
+        minuteInput.addEventListener('focus', function() {
+          setTimeout(() => { this.select(); }, 50);
+        });
+      }
     })();
 
     // Animate progress bars after a short delay
