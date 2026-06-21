@@ -1915,17 +1915,17 @@
           <label class="form-label" id="debt-name-label">Debt Name</label>
           <input class="form-input" id="debt-name" placeholder="e.g. GCash, Maribank..." />
         </div>
-        <div class="form-row">
-          <div class="form-group">
+        <div class="form-row" id="debt-amount-row">
+          <div class="form-group" id="debt-total-group">
             <label class="form-label" id="debt-total-label">Total Debt (₱)</label>
             <input class="form-input" id="debt-total" type="number" placeholder="0.00" oninput="calcMonthlyAmount()" />
           </div>
-          <div class="form-group">
+          <div class="form-group" id="debt-min-group">
             <label class="form-label" id="debt-min-label">Monthly Payment (₱)</label>
             <input class="form-input" id="debt-min" type="number" placeholder="0.00" />
           </div>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="debt-saved-group">
           <label class="form-label" id="debt-saved-label">Amount Saved (₱)</label>
           <input class="form-input" id="debt-saved" type="number" placeholder="0.00" />
         </div>
@@ -1934,7 +1934,7 @@
         <div class="section-divider"></div>
 
         <!-- Payment Schedule -->
-        <div class="toggle-row">
+        <div class="toggle-row" id="debt-schedule-toggle-row">
           <div>
             <div class="toggle-label" id="schedule-toggle-label">📅 Payment Schedule</div>
             <div class="toggle-sub" id="schedule-toggle-sub">Set recurring monthly installments</div>
@@ -1950,7 +1950,7 @@
               <label class="form-label">Pay on Day</label>
               <input class="form-input" id="schedule-day" type="text" readonly placeholder="Select Day" onclick="openDayPicker()" style="cursor: pointer; caret-color: transparent;" />
             </div>
-             <div class="form-group" style="margin-bottom:10px">
+             <div class="form-group" style="margin-bottom:10px" id="schedule-end-group">
               <label class="form-label">Ending Month</label>
               <div class="form-row" style="gap:8px; margin-bottom:0">
                 <input class="form-input" id="schedule-end-month-m" type="text" readonly placeholder="Month"
@@ -2992,17 +2992,18 @@
               !d.paid && days <= 3 ? `<span class="badge badge-amber">Soon</span>` :
                 d.paid ? `<span class="badge badge-emerald">Paid ✓</span>` : '';
 
-          let typeTag = '';
+          let installmentBadge = '';
           if (d.isInstallment) {
             const parentItem = state.debts.find(item => item.id === d.debtId);
             const parentType = parentItem ? parentItem.type : 'debt';
-            if (parentType === 'bill') typeTag = ' · Bill';
-            else if (parentType === 'savings') typeTag = ' · Savings';
-            else typeTag = ' · Debt';
+            if (parentType === 'bill') {
+              installmentBadge = `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.monthLabel || ''} · Bill</span></div>`;
+            } else if (parentType === 'savings') {
+              installmentBadge = `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.installmentIndex + 1} of ${d.installmentTotal} · Savings</span></div>`;
+            } else {
+              installmentBadge = `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.installmentIndex + 1} of ${d.installmentTotal} · Debt</span></div>`;
+            }
           }
-          const installmentBadge = d.isInstallment
-            ? `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.installmentIndex + 1} of ${d.installmentTotal}${typeTag}</span></div>`
-            : '';
 
           const reminderIcon = d.reminderEnabled ? ' 🔔' : '';
 
@@ -3149,17 +3150,18 @@
           const badgeClass = 'paid-bg'; 
           const dayStyle = 'color:var(--emerald)';
           const urgencyBadge = `<span class="badge badge-emerald">Paid ✓</span>`;
-          let typeTag = '';
+          let installmentBadge = '';
           if (d.isInstallment) {
             const parentItem = state.debts.find(item => item.id === d.debtId);
             const parentType = parentItem ? parentItem.type : 'debt';
-            if (parentType === 'bill') typeTag = ' · Bill';
-            else if (parentType === 'savings') typeTag = ' · Savings';
-            else typeTag = ' · Debt';
+            if (parentType === 'bill') {
+              installmentBadge = `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.monthLabel || ''} · Bill</span></div>`;
+            } else if (parentType === 'savings') {
+              installmentBadge = `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.installmentIndex + 1} of ${d.installmentTotal} · Savings</span></div>`;
+            } else {
+              installmentBadge = `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.installmentIndex + 1} of ${d.installmentTotal} · Debt</span></div>`;
+            }
           }
-          const installmentBadge = d.isInstallment
-            ? `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.installmentIndex + 1} of ${d.installmentTotal}${typeTag}</span></div>`
-            : '';
           const reminderIcon = d.reminderEnabled ? ' 🔔' : '';
           const checkAction = d.isInstallment
             ? `toggleInstallmentPaid(event,'${d.debtId}',${d.installmentIndex})`
@@ -3496,12 +3498,14 @@
           const lastDay = new Date(y, m + 1, 0).getDate();
           const day = Math.min(dueDay, lastDay);
           const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const monthLabel = `${MONTHS_FULL[m]} ${y}`;
           items.push({
             id: `inst_${debt.id}_${i}`,
             debtId: debt.id,
             debtName: debt.name,
             installmentIndex: i,
             installmentTotal: numMonths,
+            monthLabel,
             name: debt.name,
             date: dateStr,
             amount: monthlyAmount,
@@ -3605,30 +3609,58 @@
       const schedToggleLabelEl = document.getElementById('schedule-toggle-label');
       const schedToggleSubEl = document.getElementById('schedule-toggle-sub');
 
+      const totalGroup = document.getElementById('debt-total-group');
+      const minGroup = document.getElementById('debt-min-group');
+      const amountRow = document.getElementById('debt-amount-row');
+      const savedGroup = document.getElementById('debt-saved-group');
+      const schedToggleRow = document.getElementById('debt-schedule-toggle-row');
+      const scheduleFields = document.getElementById('schedule-fields');
+      const endGroup = document.getElementById('schedule-end-group');
+
       if (type === 'bill') {
         titleEl.textContent = isEdit ? 'Edit Monthly Bill' : 'Add Monthly Bill';
         if (nameLabelEl) nameLabelEl.textContent = 'Bill Name';
-        if (totalLabelEl) totalLabelEl.textContent = 'Total Bill Amount (₱)';
         if (minLabelEl) minLabelEl.textContent = 'Monthly Bill Amount (₱)';
-        if (savedLabelEl) savedLabelEl.textContent = 'Amount Paid (₱)';
-        if (schedToggleLabelEl) schedToggleLabelEl.textContent = '📅 Payment Schedule';
-        if (schedToggleSubEl) schedToggleSubEl.textContent = 'Set recurring monthly payments';
-      } else if (type === 'savings') {
-        titleEl.textContent = isEdit ? 'Edit Savings Goal' : 'Add Savings Goal';
-        if (nameLabelEl) nameLabelEl.textContent = 'Savings Goal Name';
-        if (totalLabelEl) totalLabelEl.textContent = 'Target Goal Amount (₱)';
-        if (minLabelEl) minLabelEl.textContent = 'Monthly Savings Target (₱)';
-        if (savedLabelEl) savedLabelEl.textContent = 'Amount Saved (₱)';
-        if (schedToggleLabelEl) schedToggleLabelEl.textContent = '📅 Savings Schedule';
-        if (schedToggleSubEl) schedToggleSubEl.textContent = 'Set recurring monthly savings';
+        
+        // Hide Total Debt, Saved, Schedule Toggle, Ending Month
+        if (totalGroup) totalGroup.classList.add('hidden');
+        if (savedGroup) savedGroup.classList.add('hidden');
+        if (schedToggleRow) schedToggleRow.classList.add('hidden');
+        if (endGroup) endGroup.classList.add('hidden');
+        
+        // Make Monthly Bill Amount input take full width
+        if (amountRow) amountRow.style.gridTemplateColumns = '1fr';
+        
+        // Always show schedule fields for bills
+        if (scheduleFields) scheduleFields.classList.remove('hidden');
       } else {
-        titleEl.textContent = isEdit ? 'Edit Debt' : 'Add Utang';
-        if (nameLabelEl) nameLabelEl.textContent = 'Debt Name';
-        if (totalLabelEl) totalLabelEl.textContent = 'Total Debt (₱)';
-        if (minLabelEl) minLabelEl.textContent = 'Monthly Payment (₱)';
-        if (savedLabelEl) savedLabelEl.textContent = 'Amount Saved (₱)';
-        if (schedToggleLabelEl) schedToggleLabelEl.textContent = '📅 Payment Schedule';
-        if (schedToggleSubEl) schedToggleSubEl.textContent = 'Set recurring monthly installments';
+        // Show everything for debts and savings
+        if (totalGroup) totalGroup.classList.remove('hidden');
+        if (savedGroup) savedGroup.classList.remove('hidden');
+        if (schedToggleRow) schedToggleRow.classList.remove('hidden');
+        if (endGroup) endGroup.classList.remove('hidden');
+        if (amountRow) amountRow.style.gridTemplateColumns = '1fr 1fr';
+        
+        // Let toggleScheduleUI decide schedule fields visibility
+        toggleScheduleUI();
+
+        if (type === 'savings') {
+          titleEl.textContent = isEdit ? 'Edit Savings Goal' : 'Add Savings Goal';
+          if (nameLabelEl) nameLabelEl.textContent = 'Savings Goal Name';
+          if (totalLabelEl) totalLabelEl.textContent = 'Target Goal Amount (₱)';
+          if (minLabelEl) minLabelEl.textContent = 'Monthly Savings Target (₱)';
+          if (savedLabelEl) savedLabelEl.textContent = 'Amount Saved (₱)';
+          if (schedToggleLabelEl) schedToggleLabelEl.textContent = '📅 Savings Schedule';
+          if (schedToggleSubEl) schedToggleSubEl.textContent = 'Set recurring monthly savings';
+        } else {
+          titleEl.textContent = isEdit ? 'Edit Debt' : 'Add Utang';
+          if (nameLabelEl) nameLabelEl.textContent = 'Debt Name';
+          if (totalLabelEl) totalLabelEl.textContent = 'Total Debt (₱)';
+          if (minLabelEl) minLabelEl.textContent = 'Monthly Payment (₱)';
+          if (savedLabelEl) savedLabelEl.textContent = 'Amount Saved (₱)';
+          if (schedToggleLabelEl) schedToggleLabelEl.textContent = '📅 Payment Schedule';
+          if (schedToggleSubEl) schedToggleSubEl.textContent = 'Set recurring monthly installments';
+        }
       }
     }
 
@@ -3773,6 +3805,12 @@
       const total = parseFloat(document.getElementById('debt-total').value) || 0;
       const min = parseFloat(document.getElementById('debt-min').value) || 0;
       const saved = parseFloat(document.getElementById('debt-saved').value) || 0;
+      
+      if (!name) { showToast('⚠️ Please enter a name'); return; }
+
+      let totalVal = total;
+      let minVal = min;
+      let savedVal = saved;
       let goal = total;
       let status = '';
       if (editingDebtId) {
@@ -3781,29 +3819,21 @@
         status = existing?.status || '';
       }
 
-      if (!name) { showToast('⚠️ Please enter a name'); return; }
+      if (type === 'bill') {
+        totalVal = min;
+        goal = min;
+        savedVal = 0;
+        minVal = min;
+      }
 
       // Build schedule
-      const schedEnabled = document.getElementById('schedule-enabled').checked;
       let schedule = null;
-      if (schedEnabled) {
+      if (type === 'bill') {
         const dueDay = parseInt(document.getElementById('schedule-day').value) || 15;
-        const start = getSelectedStartMonthYear();
-        const startYear = start ? start.y : new Date().getFullYear();
-        const startMonth = start ? start.m : new Date().getMonth();
-        
-        const monthsInput = document.getElementById('schedule-months');
-        let numMonths = 1;
-        if (monthsInput) {
-          numMonths = parseInt(monthsInput.value) || 1;
-        } else {
-          const end = getSelectedEndMonthYear();
-          if (start && end) {
-            numMonths = (end.y * 12 + end.m) - (start.y * 12 + start.m) + 1;
-            if (numMonths < 1) numMonths = 1;
-          }
-        }
-        const monthlyAmount = min > 0 ? min : ((total > 0 && numMonths > 0) ? Math.round((total / numMonths) * 100) / 100 : 0);
+        const startYear = new Date().getFullYear();
+        const startMonth = new Date().getMonth();
+        const numMonths = 120; // 10 years recurring monthly
+        const monthlyAmount = minVal;
         const reminderEnabled = document.getElementById('reminder-enabled').checked;
         let reminders = reminderEnabled ? [...modalReminders] : [];
         if (reminderEnabled && reminders.length === 0) {
@@ -3828,7 +3858,7 @@
             showToast('⚠️ Please enter minutes between 0 and 59');
             return;
           }
-          const minVal = String(rawMin).padStart(2, '0');
+          const minValStr = String(rawMin).padStart(2, '0');
           const periodVal = document.getElementById('reminder-time-period').value || 'AM';
           let hour24 = hourVal;
           if (periodVal === 'PM' && hourVal !== 12) {
@@ -3836,7 +3866,7 @@
           } else if (periodVal === 'AM' && hourVal === 12) {
             hour24 = 0;
           }
-          const timeVal = `${String(hour24).padStart(2, '0')}:${minVal}`;
+          const timeVal = `${String(hour24).padStart(2, '0')}:${minValStr}`;
           reminders.push({ daysBefore, time: timeVal });
         }
 
@@ -3851,16 +3881,84 @@
           paidInstallments = existing?.schedule?.paidInstallments || [];
         }
         schedule = { enabled: true, dueDay, numMonths, startYear, startMonth, monthlyAmount, reminderEnabled, reminderDaysBefore, reminderTime, reminders, paidInstallments };
-      } else if (editingDebtId) {
-        const existing = state.debts.find(d => d.id === editingDebtId);
-        if (existing?.schedule) schedule = { ...existing.schedule, enabled: false };
+      } else {
+        const schedEnabled = document.getElementById('schedule-enabled').checked;
+        if (schedEnabled) {
+          const dueDay = parseInt(document.getElementById('schedule-day').value) || 15;
+          const start = getSelectedStartMonthYear();
+          const startYear = start ? start.y : new Date().getFullYear();
+          const startMonth = start ? start.m : new Date().getMonth();
+          
+          const monthsInput = document.getElementById('schedule-months');
+          let numMonths = 1;
+          if (monthsInput) {
+            numMonths = parseInt(monthsInput.value) || 1;
+          } else {
+            const end = getSelectedEndMonthYear();
+            if (start && end) {
+              numMonths = (end.y * 12 + end.m) - (start.y * 12 + start.m) + 1;
+              if (numMonths < 1) numMonths = 1;
+            }
+          }
+          const monthlyAmount = minVal > 0 ? minVal : ((totalVal > 0 && numMonths > 0) ? Math.round((totalVal / numMonths) * 100) / 100 : 0);
+          const reminderEnabled = document.getElementById('reminder-enabled').checked;
+          let reminders = reminderEnabled ? [...modalReminders] : [];
+          if (reminderEnabled && reminders.length === 0) {
+            const isDue = document.getElementById('reminder-type-due').classList.contains('active');
+            let daysBefore = 0;
+            if (!isDue) {
+              const rawDays = document.getElementById('reminder-days-input').value;
+              if (rawDays.trim() === "") {
+                showToast('⚠️ Please enter number of days');
+                return;
+              }
+              daysBefore = parseInt(rawDays);
+              if (isNaN(daysBefore) || daysBefore < 1) {
+                showToast('⚠️ Please enter a valid number of days');
+                return;
+              }
+            }
+            const hourVal = parseInt(document.getElementById('reminder-time-hour').value) || 9;
+            let rawMin = parseInt(document.getElementById('reminder-time-minute').value) || 0;
+            if (rawMin === 60) rawMin = 0;
+            if (rawMin < 0 || rawMin > 59) {
+              showToast('⚠️ Please enter minutes between 0 and 59');
+              return;
+            }
+            const minValStr = String(rawMin).padStart(2, '0');
+            const periodVal = document.getElementById('reminder-time-period').value || 'AM';
+            let hour24 = hourVal;
+            if (periodVal === 'PM' && hourVal !== 12) {
+              hour24 = hourVal + 12;
+            } else if (periodVal === 'AM' && hourVal === 12) {
+              hour24 = 0;
+            }
+            const timeVal = `${String(hour24).padStart(2, '0')}:${minValStr}`;
+            reminders.push({ daysBefore, time: timeVal });
+          }
+
+          const firstRem = reminders[0];
+          const reminderDaysBefore = firstRem ? firstRem.daysBefore : 1;
+          const reminderTime = firstRem ? firstRem.time : '09:00';
+
+          // Preserve paid installments if editing
+          let paidInstallments = [];
+          if (editingDebtId) {
+            const existing = state.debts.find(d => d.id === editingDebtId);
+            paidInstallments = existing?.schedule?.paidInstallments || [];
+          }
+          schedule = { enabled: true, dueDay, numMonths, startYear, startMonth, monthlyAmount, reminderEnabled, reminderDaysBefore, reminderTime, reminders, paidInstallments };
+        } else if (editingDebtId) {
+          const existing = state.debts.find(d => d.id === editingDebtId);
+          if (existing?.schedule) schedule = { ...existing.schedule, enabled: false };
+        }
       }
 
       if (editingDebtId) {
         const idx = state.debts.findIndex(d => d.id === editingDebtId);
-        if (idx > -1) state.debts[idx] = { ...state.debts[idx], type, name, total, min, goal, saved, status, schedule };
+        if (idx > -1) state.debts[idx] = { ...state.debts[idx], type, name, total: totalVal, min: minVal, goal, saved: savedVal, status, schedule };
       } else {
-        state.debts.push({ id: uid(), type, name, total, min, goal, saved, status, schedule });
+        state.debts.push({ id: uid(), type, name, total: totalVal, min: minVal, goal, saved: savedVal, status, schedule });
       }
 
       closeModal('debt-modal');
