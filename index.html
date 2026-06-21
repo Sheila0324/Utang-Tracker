@@ -1780,6 +1780,11 @@
         <div class="card" id="dash-budget"></div>
       </div>
 
+      <div class="section-label">📅 Monthly Budget</div>
+      <div style="padding: 0 16px;">
+        <div class="card" id="dash-monthly-budget"></div>
+      </div>
+
 
 
       <div style="height: 8px;"></div>
@@ -1899,21 +1904,29 @@
         <div class="modal-handle"></div>
         <div class="modal-title" id="debt-modal-title">Add Utang</div>
         <div class="form-group">
-          <label class="form-label">Debt Name</label>
+          <label class="form-label">Category Type</label>
+          <select class="form-input" id="debt-type" style="padding:12px; background:var(--bg3)" onchange="updateDebtModalLabels()">
+            <option value="debt">💳 Debt</option>
+            <option value="bill">🧾 Monthly Bill</option>
+            <option value="savings">🐷 Savings Goal</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" id="debt-name-label">Debt Name</label>
           <input class="form-input" id="debt-name" placeholder="e.g. GCash, Maribank..." />
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Total Debt (₱)</label>
+            <label class="form-label" id="debt-total-label">Total Debt (₱)</label>
             <input class="form-input" id="debt-total" type="number" placeholder="0.00" oninput="calcMonthlyAmount()" />
           </div>
           <div class="form-group">
-            <label class="form-label">Monthly Payment (₱)</label>
+            <label class="form-label" id="debt-min-label">Monthly Payment (₱)</label>
             <input class="form-input" id="debt-min" type="number" placeholder="0.00" />
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Amount Saved (₱)</label>
+          <label class="form-label" id="debt-saved-label">Amount Saved (₱)</label>
           <input class="form-input" id="debt-saved" type="number" placeholder="0.00" />
         </div>
 
@@ -1923,8 +1936,8 @@
         <!-- Payment Schedule -->
         <div class="toggle-row">
           <div>
-            <div class="toggle-label">📅 Payment Schedule</div>
-            <div class="toggle-sub">Set recurring monthly installments</div>
+            <div class="toggle-label" id="schedule-toggle-label">📅 Payment Schedule</div>
+            <div class="toggle-sub" id="schedule-toggle-sub">Set recurring monthly installments</div>
           </div>
           <label class="toggle-switch">
             <input type="checkbox" id="schedule-enabled" onchange="toggleScheduleUI()">
@@ -2069,9 +2082,12 @@
         <div class="form-group">
           <label class="form-label">Type</label>
           <select class="form-input" id="sec-type" style="padding:12px; background:var(--bg3)">
-            <option value="income">Income (Adds to Total Income)</option>
-            <option value="expense">Expense (Adds to Budget Breakdown)</option>
-            <option value="envelope">Envelope (Adds to Envelope Split)</option>
+            <option value="income">Income (Weekly)</option>
+            <option value="expense">Expense (Weekly)</option>
+            <option value="envelope">Envelope (Weekly)</option>
+            <option value="monthly_income">Income (Monthly)</option>
+            <option value="monthly_bill">Bill (Monthly)</option>
+            <option value="monthly_savings">Savings (Monthly)</option>
           </select>
         </div>
         <div class="form-actions">
@@ -2094,7 +2110,7 @@
           <input class="form-input" id="item-name" placeholder="e.g. Salary, Rent, Netflix..." />
         </div>
         <div class="form-group">
-          <label class="form-label">Amount per week (₱)</label>
+          <label class="form-label" id="item-amount-label">Amount per week (₱)</label>
           <input class="form-input" id="item-amount" type="number" placeholder="0.00" />
         </div>
         <div class="form-actions">
@@ -2187,8 +2203,32 @@
     const DEFAULT_SECTIONS = [
       { id: 'sec_1', title: '💸 Weekly Income', type: 'income', items: [] },
       { id: 'sec_2', title: '📋 Budget Breakdown', type: 'expense', items: [] },
-      { id: 'sec_3', title: '✉️ Envelope Split', type: 'envelope', items: [] }
+      { id: 'sec_3', title: '✉️ Envelope Split', type: 'envelope', items: [] },
+      { id: 'sec_4', title: '💼 Monthly Income', type: 'monthly_income', items: [] },
+      { id: 'sec_5', title: '🧾 Monthly Bills', type: 'monthly_bill', items: [] },
+      { id: 'sec_6', title: '🐷 Monthly Savings', type: 'monthly_savings', items: [] }
     ];
+
+    function ensureMonthlySections() {
+      if (!state.sections) {
+        state.sections = JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
+        return true;
+      }
+      const defaultMonthly = [
+        { id: 'sec_4', title: '💼 Monthly Income', type: 'monthly_income', items: [] },
+        { id: 'sec_5', title: '🧾 Monthly Bills', type: 'monthly_bill', items: [] },
+        { id: 'sec_6', title: '🐷 Monthly Savings', type: 'monthly_savings', items: [] }
+      ];
+      let updated = false;
+      defaultMonthly.forEach(ns => {
+        const exists = state.sections.some(s => s.type === ns.type);
+        if (!exists) {
+          state.sections.push(ns);
+          updated = true;
+        }
+      });
+      return updated;
+    }
 
     // ============================================================
     // STATE
@@ -2229,6 +2269,7 @@
           if (parsed.debts && parsed.dues) {
             state = parsed;
             if (!state.sections) state.sections = DEFAULT_SECTIONS;
+            ensureMonthlySections();
             renderAll(); // Show cached data immediately
           }
         } catch (e) { }
@@ -2243,6 +2284,7 @@
             dues: JSON.parse(JSON.stringify(DEFAULT_DUES)),
             sections: JSON.parse(JSON.stringify(DEFAULT_SECTIONS)),
           };
+          ensureMonthlySections();
           localSave();
         }
         hideLoading();
@@ -2267,7 +2309,12 @@
           sections: budgetData.sections ?? DEFAULT_SECTIONS,
         };
 
-        localSave(); // Update local cache
+        const updated = ensureMonthlySections();
+        if (updated) {
+          saveState();
+        } else {
+          localSave(); // Update local cache
+        }
         renderAll();
       } catch (err) {
         console.error('Supabase load error:', err);
@@ -2279,6 +2326,7 @@
             dues: JSON.parse(JSON.stringify(DEFAULT_DUES)),
             sections: JSON.parse(JSON.stringify(DEFAULT_SECTIONS)),
           };
+          ensureMonthlySections();
           renderAll();
         }
       } finally {
@@ -2306,6 +2354,7 @@
         const debtsToUpsert = state.debts.map(d => ({
           id: d.id, name: d.name, total: d.total, min: d.min,
           goal: d.goal, saved: d.saved, status: d.status || '',
+          type: d.type || 'debt',
           schedule: d.schedule || null
         }));
 
@@ -2497,12 +2546,13 @@
     // ============================================================
     function renderDashboard() {
       const debts = state.debts;
-      const totalDebt = debts.reduce((s, d) => s + d.total, 0);
-      const totalSaved = debts.reduce((s, d) => s + (d.saved || 0), 0);
+      const debtsOnly = debts.filter(d => !d.type || d.type === 'debt');
+      const totalDebt = debtsOnly.reduce((s, d) => s + d.total, 0);
+      const totalSaved = debtsOnly.reduce((s, d) => s + (d.saved || 0), 0);
 
       // Total & progress
       document.getElementById('dash-total').innerHTML = `<span>₱</span>${totalDebt.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      const originalTotal = debts.reduce((s, d) => s + Math.max(d.goal || d.total, d.total), 0);
+      const originalTotal = debtsOnly.reduce((s, d) => s + Math.max(d.goal || d.total, d.total), 0);
       const paid = Math.max(0, originalTotal - totalDebt);
       const pct = originalTotal > 0 ? Math.min(100, Math.round((paid / originalTotal) * 100)) : 0;
       document.getElementById('dash-progress-fill').style.width = pct + '%';
@@ -2513,10 +2563,23 @@
       const allDueForStats = [...state.dues, ...computeInstallments()];
       const overdue = allDueForStats.filter(d => !d.paid && daysUntil(d.date) < 0).length;
       const upcoming = allDueForStats.filter(d => !d.paid && daysUntil(d.date) >= 0 && daysUntil(d.date) <= 7).length;
+      
+      const activeDebtsCount = debts.filter(d => (!d.type || d.type === 'debt') && d.total > 0).length;
+      const activeBillsCount = debts.filter(d => d.type === 'bill' && d.total > 0).length;
+      const activeSavingsCount = debts.filter(d => d.type === 'savings' && d.total > 0).length;
+
       document.getElementById('dash-stats').innerHTML = `
     <div class="dash-stat-card">
-      <div class="stat-val">${debts.filter(d => d.total > 0).length}</div>
+      <div class="stat-val">${activeDebtsCount}</div>
       <div class="stat-lbl">Active Debts</div>
+    </div>
+    <div class="dash-stat-card">
+      <div class="stat-val" style="color:var(--red);">${activeBillsCount}</div>
+      <div class="stat-lbl">Active Bills</div>
+    </div>
+    <div class="dash-stat-card">
+      <div class="stat-val" style="color:var(--emerald);">${activeSavingsCount}</div>
+      <div class="stat-lbl">Active Savings</div>
     </div>
     <div class="dash-stat-card">
       <div class="stat-val" style="color:${overdue > 0 ? 'var(--red)' : upcoming > 0 ? 'var(--amber)' : 'var(--emerald)'}">${overdue > 0 ? '🔴 ' + overdue + ' Overdue' : upcoming > 0 ? '🟡 ' + upcoming + ' Soon' : '🟢 Clear'}</div>
@@ -2561,7 +2624,7 @@
       }
 
       // Snowball target (smallest debt)
-      const sorted = debts.filter(d => d.total > 0).sort((a, b) => a.total - b.total);
+      const sorted = debtsOnly.filter(d => d.total > 0).sort((a, b) => a.total - b.total);
       const target = sorted[0];
       const snowballEl = document.getElementById('dash-snowball');
       if (target) {
@@ -2623,11 +2686,66 @@
           }
         });
       }
-
       document.getElementById('dash-budget').innerHTML = budgetHtml + `
     <div class="divider"></div>
     <div class="budget-row total"><span class="label">Total Income</span><span class="amount">${fmt(totalIncome)}</span></div>
   `;
+
+      // Monthly Budget
+      const monthlyIncomeSections = state.sections.filter(s => s.type === 'monthly_income');
+      const monthlyBillSections = state.sections.filter(s => s.type === 'monthly_bill');
+      const monthlySavingsSections = state.sections.filter(s => s.type === 'monthly_savings');
+
+      const totalMonthlyIncome = monthlyIncomeSections.reduce((sum, sec) => sum + sec.items.reduce((s, i) => s + (i.amount || 0), 0), 0);
+      const totalMonthlyBills = monthlyBillSections.reduce((sum, sec) => sum + sec.items.reduce((s, i) => s + (i.amount || 0), 0), 0);
+      const totalMonthlySavings = monthlySavingsSections.reduce((sum, sec) => sum + sec.items.reduce((s, i) => s + (i.amount || 0), 0), 0);
+
+      let monthlyBudgetHtml = '';
+      let hasMonthlyItems = false;
+
+      // Group and render monthly bills
+      if (monthlyBillSections.length > 0 && monthlyBillSections.some(s => s.items.length > 0)) {
+        hasMonthlyItems = true;
+        monthlyBillSections.forEach(sec => {
+          if (sec.items.length > 0) {
+            monthlyBudgetHtml += `<div style="font-size:11px; color:var(--text3); padding:8px 0 4px; font-weight:600; text-transform:uppercase;">${sec.title}</div>`;
+            monthlyBudgetHtml += sec.items.map(c =>
+              `<div class="budget-row"><span class="label">${c.name}</span><span class="amount">${fmt(c.amount)}/month</span></div>`
+            ).join('');
+          }
+        });
+      }
+
+      // Group and render monthly savings
+      if (monthlySavingsSections.length > 0 && monthlySavingsSections.some(s => s.items.length > 0)) {
+        hasMonthlyItems = true;
+        monthlySavingsSections.forEach(sec => {
+          if (sec.items.length > 0) {
+            monthlyBudgetHtml += `<div style="font-size:11px; color:var(--text3); padding:8px 0 4px; font-weight:600; text-transform:uppercase;">${sec.title}</div>`;
+            monthlyBudgetHtml += sec.items.map(c =>
+              `<div class="budget-row"><span class="label">${c.name}</span><span class="amount">${fmt(c.amount)}/month</span></div>`
+            ).join('');
+          }
+        });
+      }
+
+      if (!hasMonthlyItems) {
+        monthlyBudgetHtml = '<div class="empty-state" style="padding:10px 0;text-align:center;font-size:13px;color:var(--text3)">No monthly categories added yet.</div>';
+      }
+
+      const monthlyRemaining = totalMonthlyIncome - totalMonthlyBills - totalMonthlySavings;
+      const remainingColor = monthlyRemaining >= 0 ? 'var(--emerald)' : 'var(--red)';
+
+      const monthlyBudgetEl = document.getElementById('dash-monthly-budget');
+      if (monthlyBudgetEl) {
+        monthlyBudgetEl.innerHTML = monthlyBudgetHtml + `
+          <div class="divider"></div>
+          <div class="budget-row"><span class="label">Total Monthly Income</span><span class="amount">${fmt(totalMonthlyIncome)}</span></div>
+          <div class="budget-row"><span class="label">Total Monthly Bills</span><span class="amount" style="color:var(--red);">${fmt(totalMonthlyBills)}</span></div>
+          <div class="budget-row"><span class="label">Total Monthly Savings</span><span class="amount" style="color:var(--emerald);">${fmt(totalMonthlySavings)}</span></div>
+          <div class="budget-row total"><span class="label">Remaining Balance</span><span class="amount" style="color:${remainingColor};">${fmt(monthlyRemaining)}</span></div>
+        `;
+      }
 
       // Envelope split
       const envEl = document.getElementById('dash-envelopes');
@@ -2684,24 +2802,12 @@
       return debts;
     }
 
-    function renderDebts() {
-      const debts = getSortedDebts();
-      const totalDebt = debts.reduce((s, d) => s + d.total, 0);
-      const totalMin = debts.reduce((s, d) => s + d.min, 0);
-      document.getElementById('debts-subtitle').textContent =
-        `${debts.length} debts • Total ${fmt(totalDebt)} • Monthly Payment ${fmt(totalMin)}`;
-
-      const container = document.getElementById('debts-list');
-      if (debts.length === 0) {
-        container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎉</div><p>No debts! You're free!</p></div>`;
-        return;
-      }
-
-      container.innerHTML = debts.map((d, i) => {
+    function renderGroupedCards(list, type) {
+      return list.map((d, i) => {
         const pct = d.goal > 0 ? Math.min(100, Math.round((d.saved / d.goal) * 100)) : 0;
         const progressClass = pct >= 100 ? 'success' : pct >= 50 ? 'amber' : '';
         const statusBadge = d.status ? `<span class="badge badge-sky">${d.status}</span>` : '';
-        const rankBadge = currentSort === 'snowball' && i === 0 ? `<span class="badge badge-indigo">❄️ Target</span>` : '';
+        const rankBadge = type === 'debt' && currentSort === 'snowball' && i === 0 ? `<span class="badge badge-indigo">❄️ Target</span>` : '';
 
         // Schedule row
         let schedHtml = '';
@@ -2726,22 +2832,44 @@
           }
         }
 
+        let amountLabel = 'total remaining';
+        let minLabel = 'Monthly Payment';
+        let badgeType = '';
+        let badgeColorClass = 'badge-indigo';
+
+        if (type === 'bill') {
+          amountLabel = 'remaining to pay';
+          minLabel = 'Monthly Bill';
+          badgeType = '🧾 Bill';
+          badgeColorClass = 'badge-red';
+        } else if (type === 'savings') {
+          amountLabel = 'remaining to save';
+          minLabel = 'Monthly Savings Target';
+          badgeType = '🐷 Savings';
+          badgeColorClass = 'badge-emerald';
+        } else {
+          badgeType = '💳 Debt';
+          badgeColorClass = 'badge-indigo';
+        }
+
+        const typeBadgeHtml = `<span class="badge ${badgeColorClass}">${badgeType}</span>`;
+
         return `
       <div class="debt-card" onclick="openDebtModal('${d.id}')" style="animation-delay:${i * 0.05}s">
         <div class="debt-card-top">
           <div>
             <div class="debt-name">${d.name}</div>
-            <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">${statusBadge}${rankBadge}</div>
+            <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">${typeBadgeHtml}${statusBadge}${rankBadge}</div>
           </div>
           <div style="text-align:right">
             <div class="debt-amount">${fmtShort(d.total)}</div>
-            <div style="font-size:11px;color:var(--text3);margin-top:2px">total remaining</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${amountLabel}</div>
           </div>
         </div>
 
         <div class="debt-meta">
           <div class="debt-meta-item">
-            <div class="meta-label">Monthly Payment</div>
+            <div class="meta-label">${minLabel}</div>
             <div class="meta-val">${fmt(d.min)}</div>
           </div>
         </div>
@@ -2749,6 +2877,50 @@
       </div>
     `;
       }).join('');
+    }
+
+    function renderDebts() {
+      const allDebts = getSortedDebts();
+
+      const debtsOnly = allDebts.filter(d => !d.type || d.type === 'debt');
+      const billsOnly = allDebts.filter(d => d.type === 'bill');
+      const savingsOnly = allDebts.filter(d => d.type === 'savings');
+
+      const totalDebt = debtsOnly.reduce((s, d) => s + d.total, 0);
+      const totalBills = billsOnly.reduce((s, d) => s + d.total, 0);
+      const totalSavings = savingsOnly.reduce((s, d) => s + d.total, 0);
+
+      const subtitleText = [];
+      if (debtsOnly.length > 0) subtitleText.push(`${debtsOnly.length} debt${debtsOnly.length > 1 ? 's' : ''} (${fmt(totalDebt)})`);
+      if (billsOnly.length > 0) subtitleText.push(`${billsOnly.length} bill${billsOnly.length > 1 ? 's' : ''} (${fmt(totalBills)})`);
+      if (savingsOnly.length > 0) subtitleText.push(`${savingsOnly.length} saving${savingsOnly.length > 1 ? 's' : ''} (${fmt(totalSavings)})`);
+
+      document.getElementById('debts-subtitle').textContent = subtitleText.length > 0 ? subtitleText.join(' • ') : 'No items tracked yet';
+
+      const container = document.getElementById('debts-list');
+      if (allDebts.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">🎉</div><p>No items tracked! You're free!</p></div>`;
+        return;
+      }
+
+      let html = '';
+
+      if (debtsOnly.length > 0) {
+        html += `<div class="section-label" style="margin-top: 10px; margin-bottom: 8px;">💳 Active Debts</div>`;
+        html += renderGroupedCards(debtsOnly, 'debt');
+      }
+
+      if (billsOnly.length > 0) {
+        html += `<div class="section-label" style="margin-top: 24px; margin-bottom: 8px;">🧾 Monthly Bills</div>`;
+        html += renderGroupedCards(billsOnly, 'bill');
+      }
+
+      if (savingsOnly.length > 0) {
+        html += `<div class="section-label" style="margin-top: 24px; margin-bottom: 8px;">🐷 Savings Goals</div>`;
+        html += renderGroupedCards(savingsOnly, 'savings');
+      }
+
+      container.innerHTML = html;
     }
 
     // ============================================================
@@ -2820,8 +2992,16 @@
               !d.paid && days <= 3 ? `<span class="badge badge-amber">Soon</span>` :
                 d.paid ? `<span class="badge badge-emerald">Paid ✓</span>` : '';
 
+          let typeTag = '';
+          if (d.isInstallment) {
+            const parentItem = state.debts.find(item => item.id === d.debtId);
+            const parentType = parentItem ? parentItem.type : 'debt';
+            if (parentType === 'bill') typeTag = ' · Bill';
+            else if (parentType === 'savings') typeTag = ' · Savings';
+            else typeTag = ' · Debt';
+          }
           const installmentBadge = d.isInstallment
-            ? `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.installmentIndex + 1} of ${d.installmentTotal}</span></div>`
+            ? `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.installmentIndex + 1} of ${d.installmentTotal}${typeTag}</span></div>`
             : '';
 
           const reminderIcon = d.reminderEnabled ? ' 🔔' : '';
@@ -2866,6 +3046,8 @@
 
       container.innerHTML = state.sections.map(sec => {
         let itemsHtml = '';
+        const isMonthly = sec.type && sec.type.startsWith('monthly_');
+        const subText = isMonthly ? 'per month' : 'per week';
         if (sec.items.length === 0) {
           itemsHtml = '<div class="empty-state" style="padding:10px 0;text-align:center;font-size:13px;color:var(--text3)">No items added.</div>';
         } else {
@@ -2876,7 +3058,7 @@
               </div>
               <div class="planner-item-right">
                 <div class="pi-amount">${fmt(i.amount)}</div>
-                <div class="pi-sub">per week</div>
+                <div class="pi-sub">${subText}</div>
               </div>
             </div>
           `).join('');
@@ -2913,7 +3095,15 @@
         `;
       } else {
         debtsContainer.innerHTML = completedDebts.map((d, i) => {
-          const statusBadge = `<span class="badge badge-emerald">🎉 Fully Paid</span>`;
+          let statusBadge = `<span class="badge badge-emerald">🎉 Fully Paid</span>`;
+          let balanceLabel = 'original balance';
+          if (d.type === 'bill') {
+            statusBadge = `<span class="badge badge-emerald">🎉 Paid Off</span>`;
+            balanceLabel = 'bill amount';
+          } else if (d.type === 'savings') {
+            statusBadge = `<span class="badge badge-emerald">🎉 Goal Achieved</span>`;
+            balanceLabel = 'savings goal';
+          }
           return `
             <div class="debt-card" onclick="openDebtModal('${d.id}')" style="opacity: 0.85; animation-delay:${i * 0.05}s">
               <div class="debt-card-top" style="margin-bottom:0">
@@ -2923,7 +3113,7 @@
                 </div>
                 <div style="text-align:right">
                   <div class="debt-amount" style="color: var(--emerald);">${fmtShort(d.goal || d.saved)}</div>
-                  <div style="font-size:11px;color:var(--text3);margin-top:2px">original balance</div>
+                  <div style="font-size:11px;color:var(--text3);margin-top:2px">${balanceLabel}</div>
                 </div>
               </div>
               <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
@@ -2943,7 +3133,7 @@
       // Update Subtitle Counts
       const subEl = document.getElementById('history-subtitle');
       if (subEl) {
-        subEl.textContent = `${completedDebts.length} completed debt${completedDebts.length !== 1 ? 's' : ''} • ${allPaid.length} paid payment${allPaid.length !== 1 ? 's' : ''}`;
+        subEl.textContent = `${completedDebts.length} completed item${completedDebts.length !== 1 ? 's' : ''} • ${allPaid.length} paid payment${allPaid.length !== 1 ? 's' : ''}`;
       }
 
       if (allPaid.length === 0) {
@@ -2959,8 +3149,16 @@
           const badgeClass = 'paid-bg'; 
           const dayStyle = 'color:var(--emerald)';
           const urgencyBadge = `<span class="badge badge-emerald">Paid ✓</span>`;
+          let typeTag = '';
+          if (d.isInstallment) {
+            const parentItem = state.debts.find(item => item.id === d.debtId);
+            const parentType = parentItem ? parentItem.type : 'debt';
+            if (parentType === 'bill') typeTag = ' · Bill';
+            else if (parentType === 'savings') typeTag = ' · Savings';
+            else typeTag = ' · Debt';
+          }
           const installmentBadge = d.isInstallment
-            ? `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.installmentIndex + 1} of ${d.installmentTotal}</span></div>`
+            ? `<div style="margin-top:4px"><span class="installment-tag">🔁 ${d.installmentIndex + 1} of ${d.installmentTotal}${typeTag}</span></div>`
             : '';
           const reminderIcon = d.reminderEnabled ? ' 🔔' : '';
           const checkAction = d.isInstallment
@@ -3395,6 +3593,45 @@
     // ============================================================
     // DEBT MODAL
     // ============================================================
+    function updateDebtModalLabels() {
+      const type = document.getElementById('debt-type').value || 'debt';
+      const isEdit = !!editingDebtId;
+
+      const titleEl = document.getElementById('debt-modal-title');
+      const nameLabelEl = document.getElementById('debt-name-label');
+      const totalLabelEl = document.getElementById('debt-total-label');
+      const minLabelEl = document.getElementById('debt-min-label');
+      const savedLabelEl = document.getElementById('debt-saved-label');
+      const schedToggleLabelEl = document.getElementById('schedule-toggle-label');
+      const schedToggleSubEl = document.getElementById('schedule-toggle-sub');
+
+      if (type === 'bill') {
+        titleEl.textContent = isEdit ? 'Edit Monthly Bill' : 'Add Monthly Bill';
+        if (nameLabelEl) nameLabelEl.textContent = 'Bill Name';
+        if (totalLabelEl) totalLabelEl.textContent = 'Total Bill Amount (₱)';
+        if (minLabelEl) minLabelEl.textContent = 'Monthly Bill Amount (₱)';
+        if (savedLabelEl) savedLabelEl.textContent = 'Amount Paid (₱)';
+        if (schedToggleLabelEl) schedToggleLabelEl.textContent = '📅 Payment Schedule';
+        if (schedToggleSubEl) schedToggleSubEl.textContent = 'Set recurring monthly payments';
+      } else if (type === 'savings') {
+        titleEl.textContent = isEdit ? 'Edit Savings Goal' : 'Add Savings Goal';
+        if (nameLabelEl) nameLabelEl.textContent = 'Savings Goal Name';
+        if (totalLabelEl) totalLabelEl.textContent = 'Target Goal Amount (₱)';
+        if (minLabelEl) minLabelEl.textContent = 'Monthly Savings Target (₱)';
+        if (savedLabelEl) savedLabelEl.textContent = 'Amount Saved (₱)';
+        if (schedToggleLabelEl) schedToggleLabelEl.textContent = '📅 Savings Schedule';
+        if (schedToggleSubEl) schedToggleSubEl.textContent = 'Set recurring monthly savings';
+      } else {
+        titleEl.textContent = isEdit ? 'Edit Debt' : 'Add Utang';
+        if (nameLabelEl) nameLabelEl.textContent = 'Debt Name';
+        if (totalLabelEl) totalLabelEl.textContent = 'Total Debt (₱)';
+        if (minLabelEl) minLabelEl.textContent = 'Monthly Payment (₱)';
+        if (savedLabelEl) savedLabelEl.textContent = 'Amount Saved (₱)';
+        if (schedToggleLabelEl) schedToggleLabelEl.textContent = '📅 Payment Schedule';
+        if (schedToggleSubEl) schedToggleSubEl.textContent = 'Set recurring monthly installments';
+      }
+    }
+
     function openDebtModal(id) {
       editingDebtId = id;
       const modal = document.getElementById('debt-modal');
@@ -3405,7 +3642,7 @@
 
       if (id) {
         const debt = state.debts.find(d => d.id === id);
-        document.getElementById('debt-modal-title').textContent = 'Edit Debt';
+        document.getElementById('debt-type').value = debt.type || 'debt';
         document.getElementById('debt-name').value = debt.name;
         document.getElementById('debt-total').value = debt.total;
         document.getElementById('debt-min').value = debt.min;
@@ -3469,7 +3706,7 @@
         if (minuteSel) minuteSel.value = '00';
         if (periodSel) periodSel.value = 'AM';
       } else {
-        document.getElementById('debt-modal-title').textContent = 'Add Utang';
+        document.getElementById('debt-type').value = 'debt';
         document.getElementById('debt-name').value = '';
         document.getElementById('debt-total').value = '';
         document.getElementById('debt-min').value = '';
@@ -3527,9 +3764,11 @@
         if (minuteSel) minuteSel.value = '00';
         if (periodSel) periodSel.value = 'AM';
       }
+      updateDebtModalLabels();
     }
 
     async function saveDebt() {
+      const type = document.getElementById('debt-type').value || 'debt';
       const name = document.getElementById('debt-name').value.trim();
       const total = parseFloat(document.getElementById('debt-total').value) || 0;
       const min = parseFloat(document.getElementById('debt-min').value) || 0;
@@ -3619,14 +3858,19 @@
 
       if (editingDebtId) {
         const idx = state.debts.findIndex(d => d.id === editingDebtId);
-        if (idx > -1) state.debts[idx] = { ...state.debts[idx], name, total, min, goal, saved, status, schedule };
+        if (idx > -1) state.debts[idx] = { ...state.debts[idx], type, name, total, min, goal, saved, status, schedule };
       } else {
-        state.debts.push({ id: uid(), name, total, min, goal, saved, status, schedule });
+        state.debts.push({ id: uid(), type, name, total, min, goal, saved, status, schedule });
       }
 
       closeModal('debt-modal');
       renderAll();
-      showToast('✓ Debt saved!');
+      
+      let labelWord = 'Debt';
+      if (type === 'bill') labelWord = 'Bill';
+      else if (type === 'savings') labelWord = 'Savings goal';
+      showToast(`✓ ${labelWord} saved!`);
+
       await saveState();
 
       if (schedule?.reminderEnabled) {
@@ -3832,6 +4076,11 @@
       modal.classList.remove('hidden');
 
       const sec = state.sections.find(s => s.id === secId);
+      const isMonthly = sec && sec.type && sec.type.startsWith('monthly_');
+      const labelEl = document.getElementById('item-amount-label');
+      if (labelEl) {
+        labelEl.textContent = isMonthly ? 'Amount per month (₱)' : 'Amount per week (₱)';
+      }
 
       if (itemId) {
         const item = sec.items.find(i => i.id === itemId);

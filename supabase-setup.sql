@@ -12,12 +12,14 @@ create table if not exists debts (
   goal numeric default 0,
   saved numeric default 0,
   status text default '',
+  type text default 'debt',       -- type of item: debt, bill, savings
   schedule jsonb default null,   -- stores recurring payment schedule + reminder settings
   created_at timestamptz default now()
 );
 
--- If upgrading an existing database, run this to add the schedule column:
+-- If upgrading an existing database, run these to add columns:
 -- alter table debts add column if not exists schedule jsonb default null;
+-- alter table debts add column if not exists type text default 'debt';
 
 -- 2. DUES TABLE
 create table if not exists dues (
